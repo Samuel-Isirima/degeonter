@@ -1,9 +1,9 @@
 import e, { Router } from 'express'
-import contactRouter from './contact';
+import tokenRouter from './token';
 
 const router = Router()
 
-router.use('/contact', contactRouter)
+router.use('/token', tokenRouter)
 
 
 export default router;
