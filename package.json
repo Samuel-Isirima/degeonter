@@ -25,6 +25,8 @@
   },
   "homepage": "https://github.com/Samuel-Isirima/online-bank-api#readme",
   "dependencies": {
+    "@raydium-io/raydium-sdk": "^1.3.1-beta.58",
+    "@solana/web3.js": "^1.95.5",
     "@types/cookie-parser": "^1.4.3",
     "@types/jsonwebtoken": "^9.0.3",
     "@types/mongodb": "^4.0.7",

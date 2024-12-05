@@ -37,3 +37,55 @@ export const GET_LATEST_TOKENS_CREATED = `
     }
   }
 `;
+
+
+
+// 4. Check Liquidity
+export const getTokenLiquidityDetails = (poolAddress: string) => `
+query GetLatestLiquidityForPool {
+    Solana {
+      DEXPools(
+        where: {
+          Pool: {
+            Market: {
+              MarketAddress: {
+                is: "${poolAddress}"
+              }
+            }
+          }
+          Transaction: { Result: { Success: true } }
+        }
+        orderBy: { descending: Block_Slot }
+        limit: { count: 1 }
+      ) {
+        Pool {
+          Market {
+            MarketAddress
+            BaseCurrency {
+              MintAddress
+              Symbol
+              Name
+            }
+            QuoteCurrency {
+              MintAddress
+              Symbol
+              Name
+            }
+          }
+          Dex {
+            ProtocolFamily
+            ProtocolName
+          }
+          Quote {
+            PostAmount
+            PriceInUSD
+            PostAmountInUSD
+          }
+          Base {
+            PostAmount
+          }
+        }
+      }
+    }
+  }
+`;
