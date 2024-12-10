@@ -52,3 +52,39 @@ export const parseTokenMarketCapHistoryAPIResponse = (response) => {
   
 
   
+  export const getImportantTradeData = (data) => //This method gets the entries from the api response that have the ATH of the coin, the ATL and the latest price 
+  {
+    if (!data || data.length === 0) {
+      throw new Error("Data array is empty or invalid.");
+    }
+  
+    let highestMarketCapEntry = data[0];
+    let lowestMarketCapEntry = data[0];
+    let latestTimeEntry = data[0];
+  
+    data.forEach((entry) => {
+      // Check for highest market cap
+      if (entry.market_cap > highestMarketCapEntry.market_cap) {
+        highestMarketCapEntry = entry;
+      }
+  
+      // Check for lowest market cap
+      if (entry.market_cap < lowestMarketCapEntry.market_cap) {
+        lowestMarketCapEntry = entry;
+      }
+  
+      // Check for latest time
+      const latestTimeDate = new Date(latestTimeEntry.time.formattedDate);
+      const entryTimeDate = new Date(entry.time.formattedDate);
+      if (entryTimeDate > latestTimeDate) {
+        latestTimeEntry = entry;
+      }
+    });
+  
+    return {
+      highestMarketCap: highestMarketCapEntry,
+      lowestMarketCap: lowestMarketCapEntry,
+      latestTime: latestTimeEntry,
+    };
+  }
+  

@@ -7,7 +7,7 @@ import { GraphQLClient, gql } from 'graphql-request';
 import { GET_LATEST_TOKENS_CREATED, GET_TOKEN_MARKET_CAP_HISTORY} from '../graphql/queries/tokenQueries';
 import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
 import { LIQUIDITY_STATE_LAYOUT_V4 } from '@raydium-io/raydium-sdk';
-import { parseTokenMarketCapHistoryAPIResponse } from '../methods/marketCap';
+import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '../methods/marketCap';
 import { exit } from 'process';
 
 export const fetchLatestCoins = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
@@ -116,6 +116,18 @@ export const getTokenMarketCapHistory = (bodyParser.urlencoded(), async(req: Req
     const response_data = response.data.data;
     //Now calculate the market cap at various times
     const marketCapHistory = parseTokenMarketCapHistoryAPIResponse(response_data);
+
+    const importantMCData = getImportantTradeData(marketCapHistory);
+
+    /*
+    Here now for our algo
+    The target of this project is not to get 100m runner projects but to get a 2x, 3x and at the most 5x from early launches
+    before they die or get rugged, ofcourse based on filters
+    So if a coin has already done a 3x or 4x, we'd skip through it
+    Hence, if ATH > 1.5x ATL, we skip
+    if MC < 80% ATH, coin is already dying; we skip
+    
+    */
 
     // Send a successful response
     return res.status(200).send({ 
