@@ -128,7 +128,7 @@ export const GET_TOKEN_CURRENT_PRICE = (tokenMint: string) => `
 //This query gets the price of the token for the last 10 transactions
 //Returns empty if there has been no trades on this coin today
 
-export const GET_TOKEN_MARKET_CAP_HISTORY = (tokenMint: string, startTime = '2024-12-03T09:36:17Z') => ` 
+export const GET_TOKEN_MARKET_CAP_HISTORY = (tokenMint: string, startTime = getTimeOneHourAgo()) => ` 
 
 
 query HistoricalMarketCap {
@@ -151,3 +151,15 @@ query HistoricalMarketCap {
 }
 
 `;
+
+
+
+function getTimeOneHourAgo(): string {
+  const now = new Date(); // Current date and time
+  now.setHours(now.getHours() - 1); // Subtract 1 hour
+
+  // Format to ISO 8601 format with 'Z'
+  const isoString = now.toISOString(); // Returns in ISO format automatically
+  return isoString;
+}
+
