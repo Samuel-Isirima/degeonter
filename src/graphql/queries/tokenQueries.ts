@@ -1,41 +1,35 @@
 
 export const GET_LATEST_TOKENS_CREATED = `
-  query MyQuery {
-    Solana(dataset: realtime, network: solana) {
-      Instructions(
-        where: {
-          Instruction: {
-            Program: {
-              Address: { is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
-              Method: { in: ["initializeMint", "initializeMint2", "initializeMint3"] }
-            }
+query MyQuery {
+  Solana(dataset: realtime, network: solana) {
+    Instructions(
+      where: {Transaction: {Result: {Success: true}}, Instruction: {Program: {Address: {is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, Method: {in: ["initializeMint", "initializeMint2", "initializeMint3", "pump", "create"]}}}}
+      orderBy: {ascending: Block_Time}
+      limit: {count: 10}
+    ) {
+      Block {
+        Date
+      }
+      Instruction {
+        Accounts {
+          Token {
+            Mint
+            Owner
           }
+          Address
         }
-        orderBy: { ascending: Block_Time }
-        limit: { count: 10 }
-      ) {
-        Block {
-          Date
+        Program {
+          AccountNames
         }
-        Instruction {
-          Accounts {
-            Token {
-              Mint
-              Owner
-            }
-            Address
-          }
-          Program {
-            AccountNames
-          }
-        }
-        Transaction {
-          Signature
-          Signer
-        }
+      }
+      Transaction {
+        Signature
+        Signer
       }
     }
   }
+}
+
 `;
 
 
@@ -163,3 +157,30 @@ function getTimeOneHourAgo(): string {
   return isoString;
 }
 
+
+
+// 4. Get dev previous queries
+export const GET_DEV_PREVIOUS_PROJECTS = (devWalletAddress: string) => `
+query MyQuery {
+  Solana(network: solana) {
+     Instructions(
+      where: {Transaction: {Signer: {is: "${devWalletAddress}"}, Result: {Success: true}}, Instruction: {Program: 
+        {Address: 
+          {is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, 
+          Method: 
+          {in: ["initializeMint", "initializeMint2", "initializeMint3", "create", "pump"]}}}}
+    ) 
+    {
+      Transaction {
+        Signer
+        Signature
+      }
+      Instruction {
+        Accounts {
+          Address
+        }
+      }
+    }
+  }
+}
+`;
