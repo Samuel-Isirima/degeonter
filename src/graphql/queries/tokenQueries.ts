@@ -165,8 +165,7 @@ query MyQuery {
   Solana(network: solana) {
      Instructions(
       where: {Transaction: {Signer: {is: "${devWalletAddress}"}, Result: {Success: true}}, Instruction: {Program: 
-        {Address: 
-          {is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, 
+        {
           Method: 
           {in: ["initializeMint", "initializeMint2", "initializeMint3", "create", "pump"]}}}}
     ) 
