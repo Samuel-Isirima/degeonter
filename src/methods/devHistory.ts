@@ -17,14 +17,12 @@ first one in the array.
 So we'd get them by using the function below;
  */
 
-function getFirstAddressInEachBlock(response) {
-    const firstAddresses = [];
+function getFirstAddressInEachBlock(response: any): string[] {
+    const firstAddresses: string[] = []; // Explicitly type the array as string[]
   
-    // Check if Solana and Instructions exist
     if (response.Solana && response.Solana.Instructions) {
-      response.Solana.Instructions.forEach(instruction => {
+      response.Solana.Instructions.forEach((instruction: any) => {
         if (instruction.Instruction && instruction.Instruction.Accounts) {
-          // Add the first address if the Accounts array exists and is not empty
           const firstAccount = instruction.Instruction.Accounts[0];
           if (firstAccount && firstAccount.Address) {
             firstAddresses.push(firstAccount.Address);
@@ -35,3 +33,73 @@ function getFirstAddressInEachBlock(response) {
   
     return firstAddresses;
   }
+  
+
+
+  //Next step is to get 3 evenly(time based) spaced transactions for each of these token, so we 
+  //can get the market cap at these three points. This has to be done in one query for all 5 tokens.
+
+
+  function analyzeDevPreviousProjectsPriceHistory(response) {
+    const trades = response.Solana.DEXTradeByTokens;
+    // Step 1: Group trades by MintAddress
+    const groupedTrades = trades.reduce((acc, trade) => {
+      const mintAddress = trade.Trade.Currency.MintAddress;
+      if (!acc[mintAddress]) acc[mintAddress] = [];
+      acc[mintAddress].push(trade);
+      return acc;
+    }, {});
+  
+    // Step 2: Find highest and lowest prices for each MintAddress
+    const result = Object.keys(groupedTrades).map(mintAddress => {
+      const tradesForAddress = groupedTrades[mintAddress];
+      const highest = tradesForAddress.reduce((max, trade) =>
+        trade.Trade.PriceInUSD > max.Trade.PriceInUSD ? trade : max, tradesForAddress[0]);
+      const lowest = tradesForAddress.reduce((min, trade) =>
+        trade.Trade.PriceInUSD < min.Trade.PriceInUSD ? trade : min, tradesForAddress[0]);
+  
+      return {
+        MintAddress: mintAddress,
+        Highest: highest,
+        Lowest: lowest
+      };
+    });
+  
+    return result;
+  }
+  
+  interface Trade {
+    MintAddress: string;
+    Highest: {
+      Block: { Height: string; Time: string };
+      Trade: { Currency: { MintAddress: string; Name: string; Symbol: string }; PriceInUSD: number };
+    };
+    Lowest: {
+      Block: { Height: string; Time: string };
+      Trade: { Currency: { MintAddress: string; Name: string; Symbol: string }; PriceInUSD: number };
+    };
+  }
+  
+  interface TimeDifference {
+    MintAddress: string;
+    TimeDifferenceMinutes: number;
+  }
+  
+  function getTimeDifferenceBetweenTokenCreationAndATH(trades: Trade[]): TimeDifference[] {
+    return trades.map((trade) => {
+      const { MintAddress, Highest, Lowest } = trade;
+  
+      // Parse the timestamps into Date objects
+      const highestTime: Date = new Date(Highest.Block.Time);
+      const lowestTime: Date = new Date(Lowest.Block.Time);
+  
+      // Calculate the time difference in minutes
+      const timeDifferenceMinutes: number = Math.abs((highestTime.getTime() - lowestTime.getTime()) / (1000 * 60));
+  
+      return {
+        MintAddress,
+        TimeDifferenceMinutes: timeDifferenceMinutes,
+      };
+    });
+  }
+  

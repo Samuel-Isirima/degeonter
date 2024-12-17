@@ -183,3 +183,37 @@ query MyQuery {
   }
 }
 `;
+
+
+
+
+// 4. Get dev previous queries
+export const GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS = (tokenAddresses: string[]) => `
+
+
+query HistoricalMarketCap {
+  Solana {
+    DEXTradeByTokens(
+      limit: {count: 50}
+      where: {Trade: {Currency: {MintAddress: {in: ${tokenAddresses}}}}, Block: {Time: { after: "2024-12-16T00:00:00Z"}}}
+      orderBy: {descending: Trade_PriceInUSD}
+    ) {
+      Block {
+        Height
+        Time
+      }
+      Trade {
+        PriceInUSD
+         Currency {
+            Name
+            Symbol
+            MintAddress
+          }
+      }
+    }
+  }
+}
+`;
+
+
+
