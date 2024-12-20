@@ -189,8 +189,6 @@ query MyQuery {
 
 // 4. Get dev previous queries
 export const GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS = (tokenAddresses: string[]) => `
-
-
 query HistoricalMarketCap {
   Solana {
     DEXTradeByTokens(
@@ -216,4 +214,31 @@ query HistoricalMarketCap {
 `;
 
 
+export const GET_TOKEN_DISTRIBUTION = (tokenAddress: string) => `
+query MyQuery {
+  Solana {
+    BalanceUpdates(where: {BalanceUpdate: {Currency: {MintAddress: {is: "${tokenAddress}"}}}}) {
+      BalanceUpdate {
+        Amount
+        AmountInUSD
+        Account {
+          Address
+          Owner
+          Token {
+            Owner
+          }
+        }
+        Currency {
+          MintAddress
+          Symbol
+        }
+        PostBalance
+        PostBalanceInUSD
+        PreBalance
+        PreBalanceInUSD
+      }
+    }
+  }
+}
 
+`;
