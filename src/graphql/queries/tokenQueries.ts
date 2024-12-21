@@ -217,10 +217,17 @@ query HistoricalMarketCap {
 export const GET_TOKEN_DISTRIBUTION = (tokenAddress: string) => `
 query MyQuery {
   Solana {
-    BalanceUpdates(where: {BalanceUpdate: {Currency: {MintAddress: {is: "${tokenAddress}"}}}}) {
+    BalanceUpdates(
+      limit: {count: 20} 
+      orderBy: {descendingByField: "TotalHolding"}
+      where: {BalanceUpdate: {Currency: {MintAddress: {is: "${tokenAddress}"}}}}
+    ) {
       BalanceUpdate {
-        Amount
-        AmountInUSD
+        Currency {
+          Name
+          MintAddress
+          Symbol
+        }
         Account {
           Address
           Owner
@@ -228,17 +235,9 @@ query MyQuery {
             Owner
           }
         }
-        Currency {
-          MintAddress
-          Symbol
-        }
-        PostBalance
-        PostBalanceInUSD
-        PreBalance
-        PreBalanceInUSD
       }
+      TotalHolding: sum(of: BalanceUpdate_Amount)
     }
   }
 }
-
 `;

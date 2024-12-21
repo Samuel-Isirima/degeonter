@@ -4,7 +4,7 @@ import axios from 'axios';
 const dotenv = require('dotenv');
 dotenv.config();
 import { GraphQLClient, gql } from 'graphql-request';
-import { GET_DEV_PREVIOUS_PROJECTS, GET_LATEST_TOKENS_CREATED, GET_TOKEN_MARKET_CAP_HISTORY, GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS} from '../graphql/queries/tokenQueries';
+import { GET_DEV_PREVIOUS_PROJECTS, GET_LATEST_TOKENS_CREATED, GET_TOKEN_DISTRIBUTION, GET_TOKEN_MARKET_CAP_HISTORY, GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS} from '../graphql/queries/tokenQueries';
 import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
 import { LIQUIDITY_STATE_LAYOUT_V4 } from '@raydium-io/raydium-sdk';
 import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '../methods/marketCap';
@@ -255,36 +255,38 @@ payload =
 
 
 
-// export const getTokenDistribution = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
-// {
-//   const api_key = process.env.API_KEY
-//   const graphqlEndpoint = process.env.API_ENDPOINT || ''
-//   const tokenMint = req.body.tokenMint
+export const getTokenDistribution = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
+{
+  const api_key = process.env.API_KEY
+  const graphqlEndpoint = process.env.API_ENDPOINT || ''
+  const tokenMint = req.body.tokenMint
   
-//   // Define the request payload
-//   const payload = {
-//     query: GET_TOKEN_MARKET_CAP_HISTORY(tokenMint)
-//   };
+  // Define the request payload
+  const payload = {
+    query: GET_TOKEN_DISTRIBUTION(tokenMint)
+  };
 
-//   try {
-//     // Send the request using Axios
-//     const response = await axios.post(graphqlEndpoint, payload, {
-//       headers: {
-//         'Content-Type': 'application/json',
-//         'Authorization': `Bearer ${api_key}`,
-//       }
-//     });
+  try {
+    // Send the request using Axios
+    const response = await axios.post(graphqlEndpoint, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${api_key}`,
+      }
+    });
 
-//     console.log(response.data.data)
-//   }
-//   catch (error) 
-//   {
-//   console.error('Error executing query:', error);
+    console.log(response.data.data)
 
-//   return res.status(403).send({ 
-//     message: `An unexpected error has occurred. Please try again later.`,
-//     error: error 
-//   });
-// }
+    
+  }
+  catch (error) 
+  {
+  console.error('Error executing query:', error);
 
-//   })
+  return res.status(403).send({ 
+    message: `An unexpected error has occurred. Please try again later.`,
+    error: error 
+  });
+}
+
+  })
