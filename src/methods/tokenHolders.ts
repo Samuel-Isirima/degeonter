@@ -399,4 +399,4 @@
 const totalSupply = 1_000_000_000; // Total supply of tokens
 const holdings = calculateTokenHoldings(response, totalSupply);
 
-console.log(holdings)
+// console.log(holdings)

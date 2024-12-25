@@ -9,6 +9,7 @@ query MyQuery {
     ) {
       Block {
         Date
+        Time
       }
       Instruction {
         Accounts {

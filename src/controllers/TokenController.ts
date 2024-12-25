@@ -9,36 +9,84 @@ import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
 import { LIQUIDITY_STATE_LAYOUT_V4 } from '@raydium-io/raydium-sdk';
 import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '../methods/marketCap';
 import { exit } from 'process';
+import { analyzeDevPreviousProjectsPriceHistory, getFirstAddressInEachBlock, getTimeDifferenceBetweenTokenCreationAndATH } from '../methods/devHistory';
+import rabbitmqService, { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
+// import { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
 
 export const fetchLatestCoins = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
 {
    const api_key = process.env.API_KEY
-
    const graphqlEndpoint = process.env.API_ENDPOINT || ''
-   
    // Define the request payload
    const payload = {
      query: GET_LATEST_TOKENS_CREATED
    };
+  let api_call_response
    
-   // Send the request using Axios
-   axios.post(graphqlEndpoint, payload, {
+  try
+  {
+  api_call_response = await axios.post(graphqlEndpoint, payload, {
      headers: {
        'Content-Type': 'application/json',
        'Authorization': `Bearer ${api_key}`,
      }
    })
-   .then(response => {
-     console.log('GraphQL Response:', response.data);
-     return res.status(200).send({ message: `Request successful.`, data: response.data})
-   })
-   .catch(error => {
+  }
+  catch(error)
+  {
      console.error('Error executing query:', error);
      return res.status(403).send({ message: `An unexpected error has occured. Please try again later.`,
      error: error})
-   });
+  }
+  //We get the dev's wallet from the result of this query
+  let api_response_data = api_call_response.data.data.Solana.Instructions
 
-   //We get the dev's wallet from the result of this query
+  //At this point, the data is an array of data that looks like this
+  /**
+   * [
+        {
+            "Block": {
+                "Date": "2024-12-25",
+                "Time": "2024-12-25T15:06:50Z"
+            },
+            "Instruction": {
+                "Accounts": [
+                    {
+                        "Address": "5L4ha3NaMy9xZztSFVAWFhjsig3KqmNBZ4TJ2iXMpump",
+                        "Token": {
+                            "Mint": "5L4ha3NaMy9xZztSFVAWFhjsig3KqmNBZ4TJ2iXMpump",
+                            "Owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                        }
+                    }
+                ],
+                "Program": {
+                    "AccountNames": [
+                        "mint"
+                    ]
+                }
+            },
+            "Transaction": {
+                "Signature": "WacTdhdNcTcNzLiTEgJD61UJXsEKejHudkmd1c6wntK4kxKanUMynrWtynRMV1MSm7vuzF75DkpUafWoYBndF83",
+                "Signer": "EzgcgmJNF2zEQHAdgfds3BphQZv8P5Yx3AzA4Cqu1grC"
+            }
+        }]
+   */
+
+   // Loop through the response and create interface instances
+   api_response_data.forEach((entry) => {
+    // Map the response to the interface
+    const message: NewTokenQueueMessageInterface = {
+      payload: entry,
+      blockTime: entry.Block.Time,
+      devAddress: entry.Transaction.Signer || "",
+      tokenMint: entry.Instruction.Accounts[0]?.Token.Mint || "",
+    }
+    rabbitmqService.sendToQueue("NEW_TOKENS", JSON.stringify(message))
+  })
+
+  return res.status(200).json({ data: api_response_data, message: 'Tokens fetched.' });
+
+
 })
 
 
@@ -277,7 +325,7 @@ export const getTokenDistribution = (bodyParser.urlencoded(), async(req: Request
 
     console.log(response.data.data)
 
-    
+
   }
   catch (error) 
   {

@@ -17,7 +17,7 @@ first one in the array.
 So we'd get them by using the function below;
  */
 
-function getFirstAddressInEachBlock(response: any): string[] {
+export const  getFirstAddressInEachBlock = function(response: any): string[] {
     const firstAddresses: string[] = []; // Explicitly type the array as string[]
   
     if (response.Solana && response.Solana.Instructions) {
@@ -40,7 +40,7 @@ function getFirstAddressInEachBlock(response: any): string[] {
   //can get the market cap at these three points. This has to be done in one query for all 5 tokens.
 
 
-  function analyzeDevPreviousProjectsPriceHistory(response) {
+export const  analyzeDevPreviousProjectsPriceHistory = function(response) {
     const trades = response.Solana.DEXTradeByTokens;
     // Step 1: Group trades by MintAddress
     const groupedTrades = trades.reduce((acc, trade) => {
@@ -85,7 +85,7 @@ function getFirstAddressInEachBlock(response: any): string[] {
     TimeDifferenceMinutes: number;
   }
   
-  function getTimeDifferenceBetweenTokenCreationAndATH(trades: Trade[]): TimeDifference[] {
+export const getTimeDifferenceBetweenTokenCreationAndATH = function(trades: Trade[]): TimeDifference[] {
     return trades.map((trade) => {
       const { MintAddress, Highest, Lowest } = trade;
   
