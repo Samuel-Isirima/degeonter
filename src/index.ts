@@ -5,6 +5,7 @@ import routes from './routes';
 import { connect } from 'http2';
 import cors from 'cors';
 import rabbitMQService from './services/rabbitmq.service';
+import { fetchLatestCoins } from './controllers/TokenController';
 
 const app: Application = express()
 const port = process.env.APP_PORT || 3000
@@ -47,3 +48,17 @@ catch (error : any)
 {
     console.log(`An error occurred while trying to initialize serrvice: ${error.message}`)
 }                    
+
+
+//Start the new tokens subscription | PS: It's not actually a subscription service. it's just a recalling of the function
+startPullingNewTokens()
+
+
+async function startPullingNewTokens() {
+    while (true) {
+      await fetchLatestCoins(); // Wait for the function to finish
+      console.log("Waiting 10 seconds before the next call...")
+      await new Promise((resolve) => setTimeout(resolve, 7000)) // Wait 7 seconds
+    }
+}
+  

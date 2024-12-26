@@ -13,7 +13,7 @@ import { analyzeDevPreviousProjectsPriceHistory, getFirstAddressInEachBlock, get
 import rabbitmqService, { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
 // import { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
 
-export const fetchLatestCoins = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
+export const fetchLatestCoins = async () => 
 {
    const api_key = process.env.API_KEY
    const graphqlEndpoint = process.env.API_ENDPOINT || ''
@@ -35,7 +35,7 @@ export const fetchLatestCoins = (bodyParser.urlencoded(), async(req: Request, re
   catch(error)
   {
      console.error('Error executing query:', error);
-     return res.status(403).send({ message: `An unexpected error has occured. Please try again later.`,
+     return({ message: `An unexpected error has occured. Please try again later.`,
      error: error})
   }
   //We get the dev's wallet from the result of this query
@@ -84,10 +84,10 @@ export const fetchLatestCoins = (bodyParser.urlencoded(), async(req: Request, re
     rabbitmqService.sendToQueue("NEW_TOKENS", JSON.stringify(message))
   })
 
-  return res.status(200).json({ data: api_response_data, message: 'Tokens fetched.' });
+  // return res.status(200).json({ data: api_response_data, message: 'Tokens fetched.' });
 
 
-})
+}
 
 
 
