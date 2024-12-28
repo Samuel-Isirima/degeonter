@@ -10,7 +10,7 @@ import { LIQUIDITY_STATE_LAYOUT_V4 } from '@raydium-io/raydium-sdk';
 import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '../methods/marketCap';
 import { exit } from 'process';
 import { analyzeDevPreviousProjectsPriceHistory, getFirstAddressInEachBlock, getTimeDifferenceBetweenTokenCreationAndATH } from '../methods/devHistory';
-import rabbitmqService, { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
+import rabbitmqService, { TokenQueueMessageInterface } from '../services/rabbitmq.service';
 // import { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
 
 export const fetchLatestCoins = async () => 
@@ -75,11 +75,12 @@ export const fetchLatestCoins = async () =>
    // Loop through the response and create interface instances
    api_response_data.forEach((entry) => {
     // Map the response to the interface
-    const message: NewTokenQueueMessageInterface = {
+    const message: TokenQueueMessageInterface = {
       payload: entry,
       blockTime: entry.Block.Time,
       devAddress: entry.Transaction.Signer || "",
       tokenMint: entry.Instruction.Accounts[0]?.Token.Mint || "",
+      filters: {}
     }
     rabbitmqService.sendToQueue("NEW_TOKENS", JSON.stringify(message))
   })
@@ -92,13 +93,15 @@ export const fetchLatestCoins = async () =>
 
 
 
-export const tokenIsMintable = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
+export const tokenIsMintable = async ( queue_message: string ) => 
 {
+  var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
+  const tokenMint = token_details_object.tokenMint
+  var mintFilter = {score: 0, comment: ""}
     try {
-        const { tokenMint } = req.body;
         // Validate input
         if (!tokenMint) {
-          return res.status(400).json({ error: 'Token mint address is required.' });
+          return
         }
         // Solana connection
         const connection = new Connection("https://api.mainnet-beta.solana.com");
@@ -115,27 +118,35 @@ export const tokenIsMintable = (bodyParser.urlencoded(), async(req: Request, res
     
             if (mintAuthority) 
             {
-              return res.status(200).json({ mintable: true, mintAuthority });
+              mintFilter.score = 0
+              mintFilter.comment = "[DANGEROUS] This token is minatable"
             } 
             else 
             {
-              return res.status(200).json({ mintable: false, message: 'Token is not mintable.' });
+              mintFilter.score = 10
+              mintFilter.comment = "[BEAUTIFUL] This token is not minatable"
             }
           } 
           else 
           {
-            return res.status(500).json({ error: 'Account data is not parsed. Unable to fetch mint authority.' });
+            mintFilter.score = 0
+            mintFilter.comment = "[WARNING] Token account data is not parsed. Unable to fetch mint authority."
           }
         } 
         else 
         {
-          return res.status(404).json({ error: 'Invalid token mint address or account not found.' });
+          mintFilter.score = 0
+          mintFilter.comment = "[DANGEROUS] Token not found."
         }
       } catch (error) {
-        // Handle unexpected errors
-        next(error);
+        mintFilter.score = 0
+        mintFilter.comment = `[DANGEROUS] An error occured while trying to get the mintability of this token. ${error}` 
       }
-});
+
+      //Now write this to the queue
+      token_details_object.filters.mintFilter = mintFilter
+      rabbitmqService.sendToQueue("MINTABILITY", JSON.stringify(token_details_object))
+}
 
 
 
@@ -218,11 +229,17 @@ export const getTokenMarketCapHistory = (bodyParser.urlencoded(), async(req: Req
 
 
 
-export const devHistory = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
+export const devHistory = async ( queue_message: string ) => 
 {
+
+  var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
+  const tokenMint = token_details_object.tokenMint
+  const devWalletAddress = token_details_object.devAddress
+
+  var devFilter = {score: 0, comment: ""}
+
   const api_key = process.env.API_KEY
   const graphqlEndpoint = process.env.API_ENDPOINT || ''
-  const devWalletAddress = req.body.devWalletAddress
   let response
   // Define the request payload
   let payload = {
@@ -243,19 +260,17 @@ export const devHistory = (bodyParser.urlencoded(), async(req: Request, res: Res
   catch (error) 
   {
   console.error('Error executing query:', error);
-
-  return res.status(403).send({ 
-    message: `An unexpected error has occurred. Please try again later.`,
-    error: error 
-  });
-}
+  //log the error
+  }
 
 const devPreviousProjects = getFirstAddressInEachBlock(response.data.data)
 
 //If this wallet is a new one, with no previous project, exit
 if(!devPreviousProjects.length)
 {
-
+  //First time dev
+  devFilter.score = 1
+  devFilter.comment = "[WARNING] This is a first time dev. Project may not even take off"
 }
 
 //Now get analysis on previous dev projects
@@ -280,12 +295,8 @@ payload =
     catch (error) 
     {
     console.error('Error executing query:', error);
-  
-    return res.status(403).send({ 
-      message: `An unexpected error has occurred. Please try again later.`,
-      error: error 
-    });
-  }
+    //Log the error  
+    }
 
 
   //get token analysis
@@ -295,7 +306,7 @@ payload =
  //With these analysis, we can get the average amount/time when the dev and his team rugs. Include this data when sending to bot. 
  //So bot can sell before the rug MC/time, whichever one is closest 
 
-})
+}
 
 
 

@@ -47,10 +47,11 @@ class RabbitMQService {
 
 export default new RabbitMQService();
 
-export interface NewTokenQueueMessageInterface {
+export interface TokenQueueMessageInterface {
     payload: any;
     blockTime: string;
     devAddress: string;
-    tokenMint: any;
+    tokenMint: string;
+    filters: any;
   }
   
