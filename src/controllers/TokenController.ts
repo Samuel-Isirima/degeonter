@@ -97,7 +97,7 @@ export const tokenIsMintable = async ( queue_message: string ) =>
 {
   var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
   const tokenMint = token_details_object.tokenMint
-  var mintFilter = {score: 0, comment: ""}
+  var mintFilter = {score: 0, comment: [""]}
     try {
         // Validate input
         if (!tokenMint) {
@@ -119,28 +119,28 @@ export const tokenIsMintable = async ( queue_message: string ) =>
             if (mintAuthority) 
             {
               mintFilter.score = 0
-              mintFilter.comment = "[DANGEROUS] This token is minatable"
+              mintFilter.comment = ["[DANGEROUS] This token is minatable"]
             } 
             else 
             {
               mintFilter.score = 10
-              mintFilter.comment = "[BEAUTIFUL] This token is not minatable"
+              mintFilter.comment = ["[BEAUTIFUL] This token is not minatable"]
             }
           } 
           else 
           {
             mintFilter.score = 0
-            mintFilter.comment = "[WARNING] Token account data is not parsed. Unable to fetch mint authority."
+            mintFilter.comment = ["[WARNING] Token account data is not parsed. Unable to fetch mint authority."]
           }
         } 
         else 
         {
           mintFilter.score = 0
-          mintFilter.comment = "[DANGEROUS] Token not found."
+          mintFilter.comment = ["[DANGEROUS] Token not found."]
         }
       } catch (error) {
         mintFilter.score = 0
-        mintFilter.comment = `[DANGEROUS] An error occured while trying to get the mintability of this token. ${error}` 
+        mintFilter.comment = [`[DANGEROUS] An error occured while trying to get the mintability of this token. ${error}`]
       }
 
       //Now write this to the queue
@@ -228,15 +228,15 @@ export const getTokenMarketCapHistory = (bodyParser.urlencoded(), async(req: Req
 
 
 
-
 export const devHistory = async ( queue_message: string ) => 
 {
 
   var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
   const tokenMint = token_details_object.tokenMint
   const devWalletAddress = token_details_object.devAddress
+  // const devWalletAddress = devAddress
 
-  var devFilter = {score: 0, comment: ""}
+  var devFilter = {score: 0, comment: [""], data: {}}
 
   const api_key = process.env.API_KEY
   const graphqlEndpoint = process.env.API_ENDPOINT || ''
@@ -264,22 +264,36 @@ export const devHistory = async ( queue_message: string ) =>
   }
 
 const devPreviousProjects = getFirstAddressInEachBlock(response.data.data)
-
+console.log('DEV PREVIOUS PROJECTS')
+console.log(devPreviousProjects)
 //If this wallet is a new one, with no previous project, exit
 if(!devPreviousProjects.length)
 {
-  //First time dev
+  
+  /**
+   *
+   * First time dev
+   * OR NOT 
+   * The EAP API only gives historical data up to 8 hours back, hence, if this dev had created a token 10 hours ago, 
+   * we wouldn't be able to get it 
+   * SO the dev could actually be a based dev, but we'd never know 
+   * So assume dev is a jeet, as there would be more jeets than based devs
+   */
   devFilter.score = 1
-  devFilter.comment = "[WARNING] This is a first time dev. Project may not even take off"
+  devFilter.comment = ["[WARNING] This may be a first time dev. Project may not even take off"]
+}
+else if(devPreviousProjects.length > 2) //This is within the past 8 hours, as the EAP API only provides data for up to 8 hours behind
+{
+  devFilter.score = 0.5
+  devFilter.comment = ["[WARNING] This is a pump and dump dev.", `[INFO] This dev has created ${devPreviousProjects.length} projects in the past 8 hours`]
 }
 
 //Now get analysis on previous dev projects
 // const tokensPriceHistoryQuery 
 payload = 
     {
-      query: GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS(devPreviousProjects)
+      query: GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS(arrayToQuotedCsv(devPreviousProjects))
     }
-
 
     try {
       // Send the request using Axios
@@ -290,7 +304,6 @@ payload =
         }
       });
   
-      console.log(response.data.data)
     }
     catch (error) 
     {
@@ -303,9 +316,39 @@ payload =
   const devPreviousTokensPriceHistory = analyzeDevPreviousProjectsPriceHistory(response.data.data)
   const devPreviousProjectsAnalysis = getTimeDifferenceBetweenTokenCreationAndATH(devPreviousTokensPriceHistory)
 
- //With these analysis, we can get the average amount/time when the dev and his team rugs. Include this data when sending to bot. 
- //So bot can sell before the rug MC/time, whichever one is closest 
+  console.log("DEV PREVIOUS TOKENS ANALYSIS")
+  console.log(devPreviousProjectsAnalysis)
 
+  //With these analysis, we can get the average amount/time when the dev and his team rugs. Include this data when sending to bot. 
+  //So bot can sell before the rug MC/time, whichever one is closest 
+
+  //Get the mode for ATH and time to ATH before rug
+  const modes: ModeResult = calculateMode(devPreviousProjectsAnalysis, 0.5, 1000)
+  
+  if(modes.ATHMode > 20000)
+  {
+
+    devFilter.score += 7
+    devFilter.comment.push("[BEAUTIFUL] This dev has many projects that reached $20k MC. Hence, you can make a 2x from his project")
+    
+  }
+  else if(modes.ATHMode < 20000 && modes.ATHMode > 12000)
+  {
+      devFilter.score += 4
+      devFilter.comment.push("[OKAY] This dev has many projects that reached $14k MC. Hence, you may make a 1.5x from his project")
+  }
+  else
+  {
+    devFilter.score += 1
+    devFilter.comment.push("[WARNING] This dev rugs projects before they can even get to the $10k MC mark.")
+  }
+
+
+  //For time difference in minutes
+
+  token_details_object.filters.devFilter = devFilter
+  rabbitmqService.sendToQueue("DEV", JSON.stringify(token_details_object))
+ 
 }
 
 
@@ -314,11 +357,11 @@ payload =
 
 
 
-export const getTokenDistribution = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
+export const getTokenDistribution = async (tokenMint: string) =>
 {
   const api_key = process.env.API_KEY
   const graphqlEndpoint = process.env.API_ENDPOINT || ''
-  const tokenMint = req.body.tokenMint
+  // const tokenMint = req.body.tokenMint
   
   // Define the request payload
   const payload = {
@@ -336,16 +379,66 @@ export const getTokenDistribution = (bodyParser.urlencoded(), async(req: Request
 
     console.log(response.data.data)
 
-
   }
   catch (error) 
   {
-  console.error('Error executing query:', error);
-
-  return res.status(403).send({ 
-    message: `An unexpected error has occurred. Please try again later.`,
-    error: error 
-  });
+  console.error('Error executing query:', error)
+  }
 }
 
-  })
+
+
+  const arrayToQuotedCsv = (array) => {
+    // Map each element to a quoted string and join with commas
+    return array.map(element => `"${element}"`).join(',');
+  };
+    
+  interface DataPoint {
+    MintAddress: string;
+    TimeDifferenceMinutes: number;
+    ATH: number;
+  }
+  
+  interface ModeResult {
+    TimeDifferenceMinutesMode: number;
+    ATHMode: number;
+  }
+  
+  function calculateMode(data: DataPoint[], timeBinSize: number, athBinSize: number): ModeResult {
+    const timeBins: Record<string, number> = {};
+    const athBins: Record<string, number> = {};
+  
+    let maxTimeFrequency = 0;
+    let maxAthFrequency = 0;
+  
+    let timeModeBin = '';
+    let athModeBin = '';
+  
+    for (const { TimeDifferenceMinutes, ATH } of data) {
+      // Calculate TimeDifferenceMinutes bin
+      const timeBin = Math.floor(TimeDifferenceMinutes / timeBinSize) * timeBinSize;
+      const timeBinKey = timeBin.toFixed(5); // For consistent bin keys
+      timeBins[timeBinKey] = (timeBins[timeBinKey] || 0) + 1;
+  
+      if (timeBins[timeBinKey] > maxTimeFrequency) {
+        maxTimeFrequency = timeBins[timeBinKey];
+        timeModeBin = timeBinKey;
+      }
+  
+      // Calculate ATH bin
+      const athBin = Math.floor(ATH / athBinSize) * athBinSize;
+      const athBinKey = athBin.toString(); // For consistent bin keys
+      athBins[athBinKey] = (athBins[athBinKey] || 0) + 1;
+  
+      if (athBins[athBinKey] > maxAthFrequency) {
+        maxAthFrequency = athBins[athBinKey];
+        athModeBin = athBinKey;
+      }
+    }
+  
+    return {
+      TimeDifferenceMinutesMode: parseFloat(timeModeBin),
+      ATHMode: parseFloat(athModeBin),
+    };
+  }
+  

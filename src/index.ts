@@ -5,7 +5,7 @@ import routes from './routes';
 import { connect } from 'http2';
 import cors from 'cors';
 import rabbitMQService from './services/rabbitmq.service';
-import { fetchLatestCoins } from './controllers/TokenController';
+import { devHistory, fetchLatestCoins, getTokenDistribution } from './controllers/TokenController';
 
 const app: Application = express()
 const port = process.env.APP_PORT || 3000
@@ -17,22 +17,22 @@ app.use(express.urlencoded({ extended: true }));
 
 //Create the queues for data
 
-(async () => {
-    try {
-      await rabbitMQService.connect()
+// (async () => {
+//     try {
+//       await rabbitMQService.connect()
   
-      const queues = ["NEW_TOKENS", "ANALYZED_TOKENS"]
-      for (const queue of queues) {
-        await rabbitMQService.createQueue(queue)
-      }
+//       const queues = ["NEW_TOKENS", /* checked */"MINTABILITY", ""]
+//       for (const queue of queues) {
+//         await rabbitMQService.createQueue(queue)
+//       }
 
-    //   await rabbitMQService.close()
+//     //   await rabbitMQService.close()
 
-    } catch (error) 
-    {
-      console.error("Error:", error)
-    }
-  })();
+//     } catch (error) 
+//     {
+//       console.error("Error:", error)
+//     }
+//   })();
 
 //app.use('/api/v1', routes)
 app.use('/api/v1', routes)
@@ -51,8 +51,11 @@ catch (error : any)
 
 
 //Start the new tokens subscription | PS: It's not actually a subscription service. it's just a recalling of the function
-startPullingNewTokens()
+// startPullingNewTokens()
 
+// devHistory('6d22FozaKK239PoBYVffkYKA1QPQZE8fC7AQkpmHQfjp')
+
+getTokenDistribution("2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump")
 
 async function startPullingNewTokens() {
     while (true) {

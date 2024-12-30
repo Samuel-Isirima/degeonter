@@ -83,15 +83,21 @@ export const  analyzeDevPreviousProjectsPriceHistory = function(response) {
   interface TimeDifference {
     MintAddress: string;
     TimeDifferenceMinutes: number;
+    ATH: number;
   }
   
 export const getTimeDifferenceBetweenTokenCreationAndATH = function(trades: Trade[]): TimeDifference[] {
+  /**
+   * 
+   * For this algo, we'd assume that all the tokens have been rugged back to $5.7k MC
+   */
     return trades.map((trade) => {
       const { MintAddress, Highest, Lowest } = trade;
   
       // Parse the timestamps into Date objects
       const highestTime: Date = new Date(Highest.Block.Time);
       const lowestTime: Date = new Date(Lowest.Block.Time);
+      const ath = Highest.Trade.PriceInUSD * 1_000_000_000
   
       // Calculate the time difference in minutes
       const timeDifferenceMinutes: number = Math.abs((highestTime.getTime() - lowestTime.getTime()) / (1000 * 60));
@@ -99,6 +105,7 @@ export const getTimeDifferenceBetweenTokenCreationAndATH = function(trades: Trad
       return {
         MintAddress,
         TimeDifferenceMinutes: timeDifferenceMinutes,
+        ATH: ath
       };
     });
   }

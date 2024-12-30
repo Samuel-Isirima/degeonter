@@ -4,7 +4,7 @@ query MyQuery {
   Solana(dataset: realtime, network: solana) {
     Instructions(
       where: {Transaction: {Result: {Success: true}}, Instruction: {Program: {Address: {is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, Method: {in: ["initializeMint", "initializeMint2", "initializeMint3", "pump", "create"]}}}}
-      orderBy: {ascending: Block_Time}
+      orderBy: {descending: Block_Time}
       limit: {count: 10}
     ) {
       Block {
@@ -193,8 +193,8 @@ export const GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS = (tokenAddresses: string[]) 
 query HistoricalMarketCap {
   Solana {
     DEXTradeByTokens(
-      limit: {count: 50}
-      where: {Trade: {Currency: {MintAddress: {in: ${tokenAddresses}}}}, Block: {Time: { after: "2024-12-16T00:00:00Z"}}}
+      limit: {count: 100000}
+      where: {Trade: {Currency: {MintAddress: {in: [${tokenAddresses}]}}}, Block: {Time: { after: "2024-12-16T00:00:00Z"}}}
       orderBy: {descending: Trade_PriceInUSD}
     ) {
       Block {
