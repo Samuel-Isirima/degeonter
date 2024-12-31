@@ -11,6 +11,7 @@ import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '..
 import { exit } from 'process';
 import { analyzeDevPreviousProjectsPriceHistory, getFirstAddressInEachBlock, getTimeDifferenceBetweenTokenCreationAndATH } from '../methods/devHistory';
 import rabbitmqService, { TokenQueueMessageInterface } from '../services/rabbitmq.service';
+import { calculateTokenHoldings } from '../methods/tokenHolders';
 // import { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
 
 export const fetchLatestCoins = async () => 
@@ -151,11 +152,15 @@ export const tokenIsMintable = async ( queue_message: string ) =>
 
 
 
-export const getTokenMarketCapHistory = (bodyParser.urlencoded(), async(req: Request, res: Response, next: NextFunction) => 
+export const getTokenMarketCapHistory = async ( queue_message: string ) => 
 {
+
+  var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
+  const tokenMint = token_details_object.tokenMint
+
+  var marketCapFilter = {score: 0, comment: [""], data: {}}
   const api_key = process.env.API_KEY
   const graphqlEndpoint = process.env.API_ENDPOINT || ''
-  const tokenMint = req.body.tokenMint
   
   // Define the request payload
   const payload = {
@@ -196,35 +201,33 @@ export const getTokenMarketCapHistory = (bodyParser.urlencoded(), async(req: Req
     */
    if(importantMCData.latestTime.market_cap > 15_000)
    {
-    return false  //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
-   }
+    //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
+    marketCapFilter.score += 1;
+    marketCapFilter.comment = ["[WARNING] Token Market Cap already about $15k"] 
+  }
 
-   if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 6)
+   if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)
    {
-      return false
+    marketCapFilter.score += 1;
+    marketCapFilter.comment = ["[WARNING] Token ATH was over 4 minutes ago. Token may be dying"] 
    }
    if(importantMCData.latestTime.market_cap < (0.7 * importantMCData.highestMarketCap.market_cap))
    {
-      return false
+    marketCapFilter.score += 1;
+    marketCapFilter.comment = ["[WARNING] Token Market Cap has fallen below 70% of ATH"] 
    }
 
-    // Send a successful response
-    return res.status(200).send({ 
-      message: `Request successful.`,
-      data: marketCapHistory
-    });
+   
+  //For time difference in minutes
 
-    } 
-    catch (error) 
-    {
-    console.error('Error executing query:', error);
-
-    return res.status(403).send({ 
-      message: `An unexpected error has occurred. Please try again later.`,
-      error: error 
-    });
+  token_details_object.filters.marketCapFilter = marketCapFilter
+  rabbitmqService.sendToQueue("MARKET_CAP", JSON.stringify(token_details_object))
   }
-})
+  catch(error)
+  {
+    console.error('Error executing query:', error);
+  }
+}
 
 
 
@@ -324,6 +327,7 @@ payload =
 
   //Get the mode for ATH and time to ATH before rug
   const modes: ModeResult = calculateMode(devPreviousProjectsAnalysis, 0.5, 1000)
+  devFilter.data = {rugATHMode: modes.ATHMode, rugTimeInMinutes: modes.TimeDifferenceMinutesMode}
   
   if(modes.ATHMode > 20000)
   {
@@ -357,8 +361,13 @@ payload =
 
 
 
-export const getTokenDistribution = async (tokenMint: string) =>
+export const getTokenDistribution = async ( queue_message: string ) => 
 {
+
+  var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
+  const tokenMint = token_details_object.tokenMint
+  var distributionFilter = {score: 0, comment: [""]}
+  
   const api_key = process.env.API_KEY
   const graphqlEndpoint = process.env.API_ENDPOINT || ''
   // const tokenMint = req.body.tokenMint
@@ -378,12 +387,33 @@ export const getTokenDistribution = async (tokenMint: string) =>
     });
 
     console.log(response.data.data)
+    const [addressHoldings, ownerHoldings] = calculateTokenHoldings(response.data.data)
+    
+    //For each owner holdings, apart from the first one which is always the bonding curve, if any other owner accounts hold more than 3%, flag
+    // Filter entries with percentage > 3
+    const holdersWithMoreThan3Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 3);
+
+    if(holdersWithMoreThan3Percent.length > 2)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
+    {
+      distributionFilter.score = 2;
+      distributionFilter.comment = ["[WARNING] There are more than 2 wallets holding over 3% of the total supply of the token"]
+    }
+    else
+    {
+      distributionFilter.score = 8;
+      distributionFilter.comment = ["[BEAUTIFUL] Only one wallet holding over 3% of the total supply of the token | The bonding curve wallet"]
+    }
 
   }
   catch (error) 
   {
   console.error('Error executing query:', error)
   }
+
+
+
+  token_details_object.filters.distributionFilter = distributionFilter
+  rabbitmqService.sendToQueue("DISTRIBUTION", JSON.stringify(token_details_object))
 }
 
 

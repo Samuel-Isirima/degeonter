@@ -55,3 +55,34 @@ export interface TokenQueueMessageInterface {
     filters: any;
   }
   
+
+
+
+// Function to process messages from the queue
+export const startQueueProcessor = async (
+    connection: Connection,
+    queueName: string,
+    processor: (message: string) => void
+  ) => {
+    const channel = await connection.createChannel();
+  
+    // Assert the queue exists
+    await channel.assertQueue(queueName);
+  
+    console.log(`Waiting for messages in queue: ${queueName}`);
+  
+    channel.consume(
+      queueName,
+      (msg) => {
+        if (msg) {
+          const messageContent = msg.content.toString();
+          console.log(`Received message from ${queueName}: ${messageContent}`);
+  
+          processor(messageContent);
+  
+          channel.ack(msg);
+        }
+      },
+      { noAck: false }
+    );
+  }

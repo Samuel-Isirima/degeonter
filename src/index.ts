@@ -17,22 +17,22 @@ app.use(express.urlencoded({ extended: true }));
 
 //Create the queues for data
 
-// (async () => {
-//     try {
-//       await rabbitMQService.connect()
+(async () => {
+    try {
+      await rabbitMQService.connect()
   
-//       const queues = ["NEW_TOKENS", /* checked */"MINTABILITY", ""]
-//       for (const queue of queues) {
-//         await rabbitMQService.createQueue(queue)
-//       }
+      const queues = ["NEW_TOKENS", /* checked */"MINTABILITY", "MARKET_CAP", "DEV", "DISTRIBUTION"]
+      for (const queue of queues) {
+        await rabbitMQService.createQueue(queue)
+      }
 
-//     //   await rabbitMQService.close()
+    //   await rabbitMQService.close()
 
-//     } catch (error) 
-//     {
-//       console.error("Error:", error)
-//     }
-//   })();
+    } catch (error) 
+    {
+      console.error("Error:", error)
+    }
+  })();
 
 //app.use('/api/v1', routes)
 app.use('/api/v1', routes)
@@ -55,7 +55,7 @@ catch (error : any)
 
 // devHistory('6d22FozaKK239PoBYVffkYKA1QPQZE8fC7AQkpmHQfjp')
 
-getTokenDistribution("2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump")
+// getTokenDistribution("G7UBEu5Ebbni4KMUViZnuqziRGesR2przSA34beipump")
 
 async function startPullingNewTokens() {
     while (true) {
@@ -65,3 +65,6 @@ async function startPullingNewTokens() {
     }
 }
   
+
+
+

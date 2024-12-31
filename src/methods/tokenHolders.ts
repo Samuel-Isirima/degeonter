@@ -1,19 +1,20 @@
-  function calculateTokenHoldings(
-    response: any[],
+export const calculateTokenHoldings = (
+    response: any,
     totalSupply: number = 1_000_000_000
   ): [{
     address: string;
     balance: number;
     percentage: string;}[],
-    { owner, totalOwned, addressCount }[]
-    ]
+    { owner, totalOwned, addressCount, percentage }[]
+    ] =>
     {
     const addressBalances: Record<string, number> = {}; // Store balances per address
     const ownerBalances: Record<string, number> = {}; // Store total balances per owner
     const ownerAddressCount: Record<string, number> = {}; // Store address count per owner
-  
+      
+    var data = response.Solana.BalanceUpdates
     // Traverse the response object to sum balances
-    response.forEach((item) => {
+    data.forEach((item) => {
       if (item.BalanceUpdate) {
         const address = item.BalanceUpdate.Account.Address;
         const owner = item.BalanceUpdate.Account.Owner; // Assuming 'Owner' field exists
@@ -39,11 +40,12 @@
     }
   
     // Prepare results for owners
-    const ownerTotals: { owner: string; totalOwned: number; addressCount: number }[] = [];
+    const ownerTotals: { owner: string; totalOwned: number; addressCount: number; percentage: any; }[] = [];
     for (const owner in ownerBalances) {
       const totalOwned = ownerBalances[owner];
       const addressCount = ownerAddressCount[owner];
-      ownerTotals.push({ owner, totalOwned, addressCount }); // Store total owned and address count per owner
+      const percentage = (totalOwned / totalSupply) * 100; // Calculate percentage
+      ownerTotals.push({ owner, totalOwned, addressCount, percentage: percentage.toFixed(2) }); // Store total owned and address count per owner
     }
   
     return [ results, ownerTotals ];
@@ -396,7 +398,7 @@
     } 
 ];
 
-const totalSupply = 1_000_000_000; // Total supply of tokens
-const holdings = calculateTokenHoldings(response, totalSupply);
+// const totalSupply = 1_000_000_000; // Total supply of tokens
+// const holdings = calculateTokenHoldings(response, totalSupply);
 
 // console.log(holdings)
