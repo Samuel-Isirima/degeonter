@@ -94,9 +94,11 @@ export const fetchLatestCoins = async () =>
 
 
 
-export const tokenIsMintable = async ( queue_message: string ) => 
+export const mintability = async ( queue_message: string ) => 
 {
   var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
+
+
   const tokenMint = token_details_object.tokenMint
   var mintFilter = {score: 0, comment: [""]}
     try {
@@ -146,13 +148,13 @@ export const tokenIsMintable = async ( queue_message: string ) =>
 
       //Now write this to the queue
       token_details_object.filters.mintFilter = mintFilter
-      rabbitmqService.sendToQueue("MINTABILITY", JSON.stringify(token_details_object))
+      return JSON.stringify(token_details_object)
 }
 
 
 
 
-export const getTokenMarketCapHistory = async ( queue_message: string ) => 
+export const marketCapHistory = async ( queue_message: string ) => 
 {
 
   var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
@@ -221,7 +223,8 @@ export const getTokenMarketCapHistory = async ( queue_message: string ) =>
   //For time difference in minutes
 
   token_details_object.filters.marketCapFilter = marketCapFilter
-  rabbitmqService.sendToQueue("MARKET_CAP", JSON.stringify(token_details_object))
+  return JSON.stringify(token_details_object)
+      // rabbitmqService.sendToQueue("MARKET_CAP", JSON.stringify(token_details_object))
   }
   catch(error)
   {
@@ -351,7 +354,8 @@ payload =
   //For time difference in minutes
 
   token_details_object.filters.devFilter = devFilter
-  rabbitmqService.sendToQueue("DEV", JSON.stringify(token_details_object))
+  return JSON.stringify(token_details_object)
+  // rabbitmqService.sendToQueue("DEV", JSON.stringify(token_details_object))
  
 }
 
@@ -361,7 +365,7 @@ payload =
 
 
 
-export const getTokenDistribution = async ( queue_message: string ) => 
+export const tokenDistribution = async ( queue_message: string ) => 
 {
 
   var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
@@ -413,7 +417,8 @@ export const getTokenDistribution = async ( queue_message: string ) =>
 
 
   token_details_object.filters.distributionFilter = distributionFilter
-  rabbitmqService.sendToQueue("DISTRIBUTION", JSON.stringify(token_details_object))
+  return JSON.stringify(token_details_object)
+  // rabbitmqService.sendToQueue("DISTRIBUTION", JSON.stringify(token_details_object))
 }
 
 
@@ -472,3 +477,27 @@ export const getTokenDistribution = async ( queue_message: string ) =>
     };
   }
   
+
+
+
+  export const processToken = async (token_details : string) =>
+  {
+
+    console.log("IN PRODESS TOKEN METHOD")
+    console.log(token_details)
+
+    // const mintability_result: string | undefined = await mintability(token_details) || '' //All tokens created with the pump program are not mintable. This is not necessary
+    // console.log(mintability_result)
+
+    delay(5000)
+    const market_cap_result: string | undefined = await marketCapHistory(token_details) || ''
+    console.log(market_cap_result)
+    const dev_history_result: string | undefined = await devHistory(market_cap_result) || ''
+    console.log(dev_history_result)
+    const distribution_result: string | undefined = await tokenDistribution(dev_history_result) || ''
+    console.log(distribution_result)
+
+  }
+
+
+  const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));

@@ -42,15 +42,6 @@ class SolanaMemecoinController {
     }
   }
 
-  // Utility method to validate Solana addresses
-  private isValidSolanaAddress(address: string): boolean {
-    try {
-      new PublicKey(address);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
 }
 
 export default new SolanaMemecoinController();

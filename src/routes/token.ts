@@ -7,12 +7,12 @@ const TokenController = require('../controllers/TokenController');
 const TokenRouter: Router = Router()
 
 /////////////////////////////////////////////////////////////////////////////////////// For PUMP.FUN //////////////////////////////////////////////////////////////////////////////////////////// 
-TokenRouter.post('/fetch-latest', TokenController.fetchLatestCoins)
-TokenRouter.post('/check-mintability', TokenController.tokenIsMintable)
+// TokenRouter.post('/fetch-latest', TokenController.fetchLatestCoins)
+// TokenRouter.post('/check-mintability', TokenController.tokenIsMintable)
 // TokenRouter.post('/get-token-two-hour-volume', TokenController.getTokenTwoHourTradingVolume)     
 // TokenRouter.post('/get-token-liquidity', TokenController.getTokenLiquidity)      //Pump.fun tokens do not have liquidity until bonding
-TokenRouter.post('/marketcap-history', TokenController.getTokenMarketCapHistory)
-TokenRouter.post('/dev-history', TokenController.devHistory)
+// TokenRouter.post('/marketcap-history', TokenController.getTokenMarketCapHistory)
+// TokenRouter.post('/dev-history', TokenController.devHistory)
 // TokenRouter.post('/check-bonding-progress', TokenController.checkBondingProgress)
 // TokenRouter.post('/check-developer-previous-projects', TokenController.developerPreviousProjects)
 // TokenRouter.post('/check-age', TokenController.tokenAge)

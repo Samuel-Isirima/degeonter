@@ -4,8 +4,9 @@ import express, { Application, Request, Response } from 'express'
 import routes from './routes';
 import { connect } from 'http2';
 import cors from 'cors';
-import rabbitMQService from './services/rabbitmq.service';
-import { devHistory, fetchLatestCoins, getTokenDistribution } from './controllers/TokenController';
+import rabbitMQService, { startQueueProcessors } from './services/rabbitmq.service';
+import { devHistory, fetchLatestCoins, marketCapHistory, mintability, processToken, tokenDistribution } from './controllers/TokenController';
+import rabbitmqService from './services/rabbitmq.service';
 
 const app: Application = express()
 const port = process.env.APP_PORT || 3000
@@ -17,22 +18,21 @@ app.use(express.urlencoded({ extended: true }));
 
 //Create the queues for data
 
-(async () => {
-    try {
-      await rabbitMQService.connect()
-  
-      const queues = ["NEW_TOKENS", /* checked */"MINTABILITY", "MARKET_CAP", "DEV", "DISTRIBUTION"]
-      for (const queue of queues) {
-        await rabbitMQService.createQueue(queue)
-      }
+// (async () => {
+//     try {
+//       await rabbitMQService.connect()
+//       const queues = ["NEW_TOKENS", /* checked */"MINTABILITY", "MARKET_CAP", "DEV", "DISTRIBUTION"]
+//     //   for (const queue of queues) {
+//     //     await rabbitMQService.getChannel(queue)
+//     //   }
+//     // rabbitMQService.getChannel("NEW_TOKENS")
+//     //   await rabbitMQService.close()
 
-    //   await rabbitMQService.close()
-
-    } catch (error) 
-    {
-      console.error("Error:", error)
-    }
-  })();
+//     } catch (error) 
+//     {
+//       console.error("Error:", error)
+//     }
+//   })();
 
 //app.use('/api/v1', routes)
 app.use('/api/v1', routes)
@@ -51,7 +51,7 @@ catch (error : any)
 
 
 //Start the new tokens subscription | PS: It's not actually a subscription service. it's just a recalling of the function
-// startPullingNewTokens()
+startPullingNewTokens()
 
 // devHistory('6d22FozaKK239PoBYVffkYKA1QPQZE8fC7AQkpmHQfjp')
 
@@ -60,11 +60,41 @@ catch (error : any)
 async function startPullingNewTokens() {
     while (true) {
       await fetchLatestCoins(); // Wait for the function to finish
-      console.log("Waiting 10 seconds before the next call...")
+      console.log("Waiting 30 seconds before the next call...")
       await new Promise((resolve) => setTimeout(resolve, 7000)) // Wait 7 seconds
     }
 }
   
 
+// Example usage
+(async () => {
+    await startQueueProcessors([
+      {
+        queueName: "NEW_TOKENS",
+        processor: processToken
+      },
+    //   {
+    //     queueName: "MINTABILITY",
+    //     processor: marketCapHistory
+    //   },
+    //   {
+    //     queueName: "MARKET_CAP",
+    //     processor: devHistory
+    //   },
 
+    //   {
+    //     queueName: "DEV",
+    //     processor: tokenDistribution
+    //   },
 
+    //   {
+    //     queueName: "DISTRIBUTION",
+    //     processor: transactionModule
+    //   },
+    ]);
+  
+   
+  })();
+  
+
+  
