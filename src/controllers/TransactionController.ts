@@ -1,17 +1,29 @@
-import { Connection, PublicKey, Transaction, Keypair, SystemProgram } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, createTransferInstruction } from "@solana/spl-token";
-
-class SolanaMemecoinController {
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction
+} from "@solana/web3.js";
+import { TokenQueueMessageInterface } from "../services/rabbitmq.service";
+class MemecoinBuyer {
   private solanaConnection: Connection;
 
-  constructor() {
-    // Initialize Solana connection
-    this.solanaConnection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+  constructor(solanaConnection: Connection) {
+    this.solanaConnection = solanaConnection;
   }
 
 
+
+  decideBuy = (token_details : string ) =>
+  {
+    var token_details_object: TokenQueueMessageInterface = JSON.parse(token_details)
+    const tokenMint = token_details_object.tokenMint
+  }
+
   // Method to carry out a buy transaction
-  async buyMemecoin(
+  async buyToken(
     tokenMintAddress: string,
     amountInSOL: number,
     slippage: number
@@ -21,11 +33,11 @@ class SolanaMemecoinController {
       const tokenMint = new PublicKey(tokenMintAddress);
       const buyerPublicKey = buyerKeypair.publicKey;
 
-      // Example: Simulate a transaction to buy memecoin
+      // Simulate a transaction to buy memecoin
       console.log(`Buying memecoin from mint ${tokenMintAddress}...`);
       console.log(`Amount in SOL: ${amountInSOL}, Slippage: ${slippage * 100}%`);
 
-      // Create a dummy transaction (you need a proper DEX or marketplace integration here)
+      // Create the transaction
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: buyerPublicKey,
@@ -34,14 +46,21 @@ class SolanaMemecoinController {
         })
       );
 
-      // Simulate sending the transaction (replace with actual sendTransaction logic)
-      const signature = await this.solanaConnection.sendTransaction(transaction, [buyerKeypair]);
-      console.log(`Transaction sent! Signature: ${signature}`);
+      // Use sendAndConfirmTransaction
+      const signature = await sendAndConfirmTransaction(
+        this.solanaConnection,
+        transaction,
+        [buyerKeypair] // Include the buyer's keypair to sign the transaction
+      );
+
+      console.log(`Transaction sent and confirmed! Signature: ${signature}`);
     } catch (error) {
-    //   console.error(`Error buying memecoin: ${error.message}`);
+      console.error(`Error buying memecoin: ${error instanceof Error ? error.message : error}`);
     }
   }
-
 }
 
-export default new SolanaMemecoinController();
+// Example usage
+const connection = new Connection("https://api.mainnet-beta.solana.com"); // Replace with your cluster endpoint
+const memecoinBuyer = new MemecoinBuyer(connection);
+// memecoinBuyer.buyMemecoin("TokenMintAddressHere", 1, 0.01);

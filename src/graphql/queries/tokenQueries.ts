@@ -129,10 +129,9 @@ export const GET_TOKEN_MARKET_CAP_HISTORY = (tokenMint: string, startTime = getT
 query HistoricalMarketCap {
   Solana {
     DEXTradeByTokens(
-      limit: {count: 50}
+      limit: {count: 1000}
       where: {Trade: {Currency: {MintAddress: {is: "${tokenMint}"}}}, Block: {Time: {after: "${startTime}"}}}
-      orderBy: {ascending: Block_Time}
-      limitBy: {by: Block_Height, count: 1}
+      orderBy: {descending: Block_Time}
     ) {
       Block {
         Height

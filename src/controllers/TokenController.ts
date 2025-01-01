@@ -184,7 +184,6 @@ export const marketCapHistory = async ( queue_message: string ) =>
     const response_data = response.data.data;
     //Now get the market cap details at various times
     const marketCapHistory = parseTokenMarketCapHistoryAPIResponse(response_data);
-
     const importantMCData = getImportantTradeData(marketCapHistory);
 
     /*
@@ -221,6 +220,7 @@ export const marketCapHistory = async ( queue_message: string ) =>
 
    
   //For time difference in minutes
+  marketCapFilter.data = { marketCap: importantMCData.latestTime.market_cap }
 
   token_details_object.filters.marketCapFilter = marketCapFilter
   return JSON.stringify(token_details_object)
@@ -290,7 +290,7 @@ if(!devPreviousProjects.length)
 }
 else if(devPreviousProjects.length > 2) //This is within the past 8 hours, as the EAP API only provides data for up to 8 hours behind
 {
-  devFilter.score = 0.5
+  devFilter.score = 0
   devFilter.comment = ["[WARNING] This is a pump and dump dev.", `[INFO] This dev has created ${devPreviousProjects.length} projects in the past 8 hours`]
 }
 
