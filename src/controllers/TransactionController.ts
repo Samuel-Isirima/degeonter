@@ -6,9 +6,13 @@ import {
   Transaction,
   sendAndConfirmTransaction
 } from "@solana/web3.js";
-import { TokenQueueMessageInterface } from "../services/rabbitmq.service";
+import rabbitMQService, { TokenQueueMessageInterface } from "../services/rabbitmq.service";
+import { TokenBuyTransactionQueueMessageInterface } from "../types";
 class MemecoinBuyer {
-  private solanaConnection: Connection;
+  private solanaConnection: Connection
+  private BUY_AMOUNT = 0.01   //In solana
+  private BUY_SLIPPAGE = 30     //Percentage
+
 
   constructor(solanaConnection: Connection) {
     this.solanaConnection = solanaConnection;
@@ -20,6 +24,37 @@ class MemecoinBuyer {
   {
     var token_details_object: TokenQueueMessageInterface = JSON.parse(token_details)
     const tokenMint = token_details_object.tokenMint
+    const marketCap = token_details_object.filters.marketCapFilter.data.marketCap
+    
+
+    const filters = token_details_object.filters
+    
+    // Sum up the scores
+    const totalScore: any = Object.values(filters).reduce((sum, filter: any) => sum + filter.score, 0)
+
+    if(totalScore > 15) // 30 for the three filters
+    {
+      //buy, and take profit at 2x
+      //build transaction object
+      
+      const tokenBuyObject: TokenBuyTransactionQueueMessageInterface = {
+        payload: token_details_object,
+        tokenMint: tokenMint,
+        buyAmountInSOL: this.BUY_AMOUNT,
+        expectedPNLinPercentage: 100,
+        marketCap: marketCap,
+        slippage: this.BUY_SLIPPAGE
+      }
+
+    //Send this to the buy queue
+    rabbitMQService.sendToQueue("BUY_TOKEN", JSON.stringify(tokenBuyObject))
+
+    }
+    else
+    {
+      //don't buy
+    }
+
   }
 
   // Method to carry out a buy transaction

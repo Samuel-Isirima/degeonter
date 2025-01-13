@@ -288,10 +288,15 @@ if(!devPreviousProjects.length)
   devFilter.score = 1
   devFilter.comment = ["[WARNING] This may be a first time dev. Project may not even take off"]
 }
-else if(devPreviousProjects.length > 2) //This is within the past 8 hours, as the EAP API only provides data for up to 8 hours behind
+else if(devPreviousProjects.length > 3) //This is within the past 8 hours, as the EAP API only provides data for up to 8 hours behind
 {
   devFilter.score = 0
   devFilter.comment = ["[WARNING] This is a pump and dump dev.", `[INFO] This dev has created ${devPreviousProjects.length} projects in the past 8 hours`]
+}
+else if(devPreviousProjects.length < 3) //This is within the past 8 hours, as the EAP API only provides data for up to 8 hours behind
+{
+  devFilter.score = 8
+  devFilter.comment = ["[OKAY] This is not a spamming dev.", `[INFO] This dev has created ${devPreviousProjects.length} projects in the past 8 hours`]
 }
 
 //Now get analysis on previous dev projects
@@ -335,13 +340,13 @@ payload =
   if(modes.ATHMode > 20000)
   {
 
-    devFilter.score += 7
+    devFilter.score += 8
     devFilter.comment.push("[BEAUTIFUL] This dev has many projects that reached $20k MC. Hence, you can make a 2x from his project")
     
   }
   else if(modes.ATHMode < 20000 && modes.ATHMode > 12000)
   {
-      devFilter.score += 4
+      devFilter.score += 5
       devFilter.comment.push("[OKAY] This dev has many projects that reached $14k MC. Hence, you may make a 1.5x from his project")
   }
   else

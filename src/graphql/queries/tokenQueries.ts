@@ -139,6 +139,9 @@ query HistoricalMarketCap {
       }
       Trade {
         PriceInUSD
+        Currency {
+          Name
+        }
       }
     }
   }
