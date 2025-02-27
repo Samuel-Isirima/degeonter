@@ -15,21 +15,21 @@ app.use(express.urlencoded({ extended: true }));
 
 //Create the queues for data
 
-// (async () => {
-//     try {
-//       await rabbitMQService.connect()
-//       const queues = ["NEW_TOKENS", /* checked */"MINTABILITY", "MARKET_CAP", "DEV", "DISTRIBUTION"]
-//     //   for (const queue of queues) {
-//     //     await rabbitMQService.getChannel(queue)
-//     //   }
-//     // rabbitMQService.getChannel("NEW_TOKENS")
-//     //   await rabbitMQService.close()
+(async () => {
+    try {
+      await rabbitMQService.connect()
+      const queues = ["NEW_TOKENS", "BUY", "SELL", "UPDATE"]
+      for (const queue of queues) {
+        await rabbitMQService.getChannel(queue)
+      }
+    // rabbitMQService.getChannel("NEW_TOKENS")
+    //   await rabbitMQService.close()
 
-//     } catch (error) 
-//     {
-//       console.error("Error:", error)
-//     }
-//   })();
+    } catch (error) 
+    {
+      console.error("Error:", error)
+    }
+  })();
 
 //app.use('/api/v1', routes)
 app.use('/api/v1', routes)
