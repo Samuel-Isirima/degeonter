@@ -1,17 +1,11 @@
-import { Router, Request, Response, NextFunction, response} from 'express'
-import bodyParser from 'body-parser';
 import axios from 'axios';
 const dotenv = require('dotenv');
 dotenv.config();
-import { GraphQLClient, gql } from 'graphql-request';
 import { GET_DEV_PREVIOUS_PROJECTS, GET_LATEST_TOKENS_CREATED, GET_TOKEN_DISTRIBUTION, GET_TOKEN_MARKET_CAP_HISTORY, GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS} from '../graphql/queries/tokenQueries';
-import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
-import { LIQUIDITY_STATE_LAYOUT_V4 } from '@raydium-io/raydium-sdk';
 import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '../methods/marketCap';
-import { exit } from 'process';
 import rabbitmqService, { TokenQueueMessageInterface } from '../services/rabbitmq.service';
 import { calculateTokenHoldings } from '../methods/tokenHolders';
-// import { NewTokenQueueMessageInterface } from '../services/rabbitmq.service';
+import Token from '../models/Token';
 
 export const fetchLatestCoins = async () => 
 {
@@ -261,3 +255,35 @@ export const tokenDistribution = async ( queue_message: string ) =>
 
 
   const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+
+export const writeTokenToDB = async (name: string, CA: string, marketcap: number, age: number, quantity_bought: number) => {
+  try {
+    const token = await Token.create({
+      name,
+      CA,
+      marketcap,
+      age,
+      quantity_bought,
+      sold: false,
+      pnl: 0,
+    });
+
+    console.log(`Token ${token.name} added successfully.`);
+  } catch (error) 
+  {
+    console.error('Error adding token:', error);
+  }
+}
+
+
+export const checkUnsoldTokens = async () => {
+  try {
+    const unsoldTokens = await Token.findAll({ where: { sold: false } });
+    return unsoldTokens
+  } 
+  catch (error) 
+  {
+    console.error('Error fetching unsold tokens:', error);
+  }
+}

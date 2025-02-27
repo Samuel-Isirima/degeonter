@@ -2,11 +2,8 @@ require('dotenv').config();
 
 import express, { Application, Request, Response } from 'express'
 import routes from './routes';
-import { connect } from 'http2';
-import cors from 'cors';
 import rabbitMQService, { startQueueProcessors } from './services/rabbitmq.service';
-import { devHistory, fetchLatestCoins, marketCapHistory, mintability, processToken, tokenDistribution } from './controllers/TokenController';
-import rabbitmqService from './services/rabbitmq.service';
+import { fetchLatestCoins, processToken } from './controllers/TokenController';
 
 const app: Application = express()
 const port = process.env.APP_PORT || 3000
@@ -72,29 +69,9 @@ async function startPullingNewTokens() {
       {
         queueName: "NEW_TOKENS",
         processor: processToken
-      },
-    //   {
-    //     queueName: "MINTABILITY",
-    //     processor: marketCapHistory
-    //   },
-    //   {
-    //     queueName: "MARKET_CAP",
-    //     processor: devHistory
-    //   },
-
-    //   {
-    //     queueName: "DEV",
-    //     processor: tokenDistribution
-    //   },
-
-    //   {
-    //     queueName: "DISTRIBUTION",
-    //     processor: transactionModule
-    //   },
+      }
     ]);
-  
-   
-  })();
+})();
   
 
   
