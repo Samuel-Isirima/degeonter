@@ -68,7 +68,7 @@ export const fetchLatestCoins = async () =>
    */
 
    // Loop through the response and create interface instances
-   api_response_data.forEach((entry) => {
+   api_response_data.forEach(async (entry) => {
     // Map the response to the interface
     const message: TokenQueueMessageInterface = {
       payload: entry,
@@ -77,7 +77,7 @@ export const fetchLatestCoins = async () =>
       tokenMint: entry.Instruction.Accounts[0]?.Token.Mint || "",
       filters: {}
     }
-    rabbitmqService.sendToQueue("NEW_TOKENS", JSON.stringify(message))
+    await rabbitmqService.sendToQueue("NEW_TOKENS", JSON.stringify(message))
   })
 
 
@@ -133,13 +133,13 @@ export const marketCapHistory = async ( queueMessage: string ) =>
     
 
     Scratch that. The algo should be based on time
-    If ATH timestamp > 5 minutes { and MC < 80% ATH } { and ATH > $15k}
+    If ATH timestamp > 5 minutes { and MC < 80% ATH } { and ATH > $10k}
     If coin is older than 10m, don't buy
 
     */
 
 
-   if(importantMCData.latestTime.market_cap < 15_000)
+   if(importantMCData.latestTime.market_cap < 10_000)
    {
     //Essentially, never buying any coin with less than 15k mc. It could be a regular rug pull
     marketCapFilter.canBuy.push(false)
@@ -149,7 +149,7 @@ export const marketCapHistory = async ( queueMessage: string ) =>
    {
     //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
     marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token Market Cap above $15k"] 
+    marketCapFilter.comment = ["✅ Token Market Cap above $10k"] 
    }
 
    if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)
@@ -221,10 +221,10 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     const holdersWithMoreThan2Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 2);
     console.log(ownerHoldings)
 
-    if(holdersWithMoreThan2Percent.length > 5)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
+    if(holdersWithMoreThan2Percent.length > 6)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
     {
       distributionFilter.canBuy.push(true)
-      distributionFilter.comment = ["❌ More than five wallets holding over 2% of the total supply of the token"] 
+      distributionFilter.comment = ["❌ More than six wallets holding over 2% of the total supply of the token"] 
     }
     else
     {
@@ -267,8 +267,8 @@ export const tokenDistribution = async ( queueMessage: string ) =>
 
 
     //Send to the buy queue if the token passes the filters
-    // if(!cannotBuy)
-      rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenResults))
+    if(!cannotBuy)
+      await rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenResults))
 
   }
 
