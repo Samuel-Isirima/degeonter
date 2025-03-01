@@ -6,6 +6,7 @@ import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '..
 import rabbitmqService, { TokenQueueMessageInterface } from '../services/rabbitmq.service';
 import { calculateTokenHoldings } from '../methods/tokenHolders';
 import Token from '../models/Token';
+import rabbitMQService from '../services/rabbitmq.service';
 
 export const fetchLatestCoins = async () => 
 {
@@ -83,11 +84,11 @@ export const fetchLatestCoins = async () =>
 }
 
 
-export const marketCapHistory = async ( queue_message: string ) => 
+export const marketCapHistory = async ( queueMessage: string ) => 
 {
 
-  var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
-  const tokenMint = token_details_object.tokenMint
+  var tokenObject: TokenQueueMessageInterface = JSON.parse(queueMessage)
+  const tokenMint = tokenObject.tokenMint
 
   var marketCapFilter = {canBuy: [true], comment: [""], data: {}}
   const api_key = process.env.API_KEY
@@ -107,12 +108,19 @@ export const marketCapHistory = async ( queue_message: string ) =>
       }
     });
 
-    console.log(response.data.data)
+    // console.log('MCH API PAYLOAD')
+    // console.log(payload)
+
+
+    // console.log('MCH API RESPONSE')
+    // console.log(response.data.data)
 
     // Store the response data in a variable
     const response_data = response.data.data;
     //Now get the market cap details at various times
     const marketCapHistory = parseTokenMarketCapHistoryAPIResponse(response_data);
+    // console.log('MARKET CAP HISTORY RESULT')
+    // console.log(marketCapHistory)
     const importantMCData = getImportantTradeData(marketCapHistory);
 
     /*
@@ -169,8 +177,8 @@ export const marketCapHistory = async ( queue_message: string ) =>
    
   //For time difference in minutes
   marketCapFilter.data = { marketCap: importantMCData.latestTime.market_cap }
-  token_details_object.filters.marketCapFilter = marketCapFilter
-  return JSON.stringify(token_details_object)
+  tokenObject.filters.marketCapFilter = marketCapFilter
+  return JSON.stringify(tokenObject)
   }
   catch(error)
   {
@@ -180,11 +188,11 @@ export const marketCapHistory = async ( queue_message: string ) =>
 
 
 
-export const tokenDistribution = async ( queue_message: string ) => 
+export const tokenDistribution = async ( queueMessage: string ) => 
 {
 
-  var token_details_object: TokenQueueMessageInterface = JSON.parse(queue_message)
-  const tokenMint = token_details_object.tokenMint
+  var tokenObject: TokenQueueMessageInterface = JSON.parse(queueMessage)
+  const tokenMint = tokenObject.tokenMint
   var distributionFilter = {canBuy: [true], comment: [""]}
   
   const api_key = process.env.API_KEY
@@ -205,12 +213,13 @@ export const tokenDistribution = async ( queue_message: string ) =>
       }
     });
 
-    console.log(response.data.data)
+    //console.log(response.data.data)
     const [addressHoldings, ownerHoldings] = calculateTokenHoldings(response.data.data)
     
     //For each owner holdings, apart from the first one which is always the bonding curve, if any other owner accounts hold more than 3%, flag
     // Filter entries with percentage > 2
     const holdersWithMoreThan2Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 2);
+    console.log(ownerHoldings)
 
     if(holdersWithMoreThan2Percent.length > 5)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
     {
@@ -229,61 +238,37 @@ export const tokenDistribution = async ( queue_message: string ) =>
   console.error('Error executing query:', error)
   }
 
-  token_details_object.filters.distributionFilter = distributionFilter
-  return JSON.stringify(token_details_object)
+  tokenObject.filters.distributionFilter = distributionFilter
+  return JSON.stringify(tokenObject)
 }
 
 
 
 
-  export const processToken = async (token_details : string) =>
+  export const processToken = async (tokenDetails : string) =>
   {
+    console.log("IN PROCESS TOKEN METHOD")
 
-    console.log("IN PRODESS TOKEN METHOD")
-    console.log(token_details)
+    // delay(5000)
+    const marketCapResult: string | undefined = await marketCapHistory(tokenDetails) || ''
+    const tokenDistributionResult: string | undefined = await tokenDistribution(marketCapResult) || ''
 
-    // const mintability_result: string | undefined = await mintability(token_details) || '' //All tokens created with the pump program are not mintable. This is not necessary
-    // console.log(mintability_result)
+    const tokenResults: TokenQueueMessageInterface = JSON.parse(tokenDistributionResult)
 
-    delay(5000)
-    const market_cap_result: string | undefined = await marketCapHistory(token_details) || ''
-    console.log(market_cap_result)
-    const distribution_result: string | undefined = await tokenDistribution(dev_history_result) || ''
-    console.log(distribution_result)
+    //For marketcap filter
+    const marketCapFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
+    const distributionFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
+
+    //foreach of these, if is false, exit
+    const cannotBuy = marketCapFilterCanBuy.some(val => val === false) && distributionFilterCanBuy.some(val => val === false);
+
+
+    //Send to the buy queue if the token passes the filters
+    if(!cannotBuy)
+      rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenDetails))
 
   }
 
 
   const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
-
-export const writeTokenToDB = async (name: string, CA: string, marketcap: number, age: number, quantity_bought: number) => {
-  try {
-    const token = await Token.create({
-      name,
-      CA,
-      marketcap,
-      age,
-      quantity_bought,
-      sold: false,
-      pnl: 0,
-    });
-
-    console.log(`Token ${token.name} added successfully.`);
-  } catch (error) 
-  {
-    console.error('Error adding token:', error);
-  }
-}
-
-
-export const checkUnsoldTokens = async () => {
-  try {
-    const unsoldTokens = await Token.findAll({ where: { sold: false } });
-    return unsoldTokens
-  } 
-  catch (error) 
-  {
-    console.error('Error fetching unsold tokens:', error);
-  }
-}

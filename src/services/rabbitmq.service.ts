@@ -2,40 +2,42 @@ import amqp, { Connection, Channel } from "amqplib";
 
 class RabbitMQService {
   private connection: Connection | null = null;
-  private channels: Map<string, Channel> = new Map();
+  private channels: Map<string, Promise<Channel>> = new Map();
 
-  // Ensure a single RabbitMQ connection
   async connect(): Promise<void> {
-    if (this.connection) return; // Avoid reconnecting if already connected
+    if (this.connection) return;
     this.connection = await amqp.connect("amqp://localhost");
     console.log("Connected to RabbitMQ");
   }
 
-  // Create or reuse a channel for a specific queue
   async getChannel(queueName: string): Promise<Channel> {
     if (!this.connection) {
       throw new Error("RabbitMQ connection is not initialized");
     }
 
+    // If a channel promise exists, return it
     if (this.channels.has(queueName)) {
-      return this.channels.get(queueName)!; // Reuse existing channel
+      return this.channels.get(queueName)!;
     }
 
-    const channel = await this.connection.createChannel();
-    await channel.assertQueue(queueName, { durable: true });
-    this.channels.set(queueName, channel);
-    console.log(`Channel created for queue: "${queueName}"`);
-    return channel;
+    // Store the channel creation promise to prevent duplicates
+    const channelPromise = (async () => {
+      const channel = await this.connection!.createChannel();
+      await channel.assertQueue(queueName, { durable: true });
+      console.log(`Channel created for queue: "${queueName}"`);
+      return channel;
+    })();
+
+    this.channels.set(queueName, channelPromise);
+    return channelPromise;
   }
 
-  // Send a message to a specific queue
   async sendToQueue(queueName: string, message: string): Promise<void> {
     const channel = await this.getChannel(queueName);
     channel.sendToQueue(queueName, Buffer.from(message), { persistent: true });
     console.log(`Message sent to "${queueName}": ${message}`);
   }
 
-  // Consume messages from a specific queue
   async consumeQueue(
     queueName: string,
     onMessage: (msg: string) => void
@@ -56,9 +58,9 @@ class RabbitMQService {
     console.log(`Started consuming messages from "${queueName}"`);
   }
 
-  // Close all channels and the connection
   async close(): Promise<void> {
-    for (const [queueName, channel] of this.channels) {
+    for (const [queueName, channelPromise] of this.channels) {
+      const channel = await channelPromise;
       await channel.close();
       console.log(`Channel for queue "${queueName}" closed`);
     }
@@ -102,4 +104,3 @@ export const startQueueProcessors = async (
     });
   }
 };
-

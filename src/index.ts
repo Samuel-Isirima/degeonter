@@ -18,12 +18,10 @@ app.use(express.urlencoded({ extended: true }));
 (async () => {
     try {
       await rabbitMQService.connect()
-      const queues = ["NEW_TOKENS", "BUY", "SELL", "UPDATE"]
+      const queues = ["NEW_TOKENS", "BUY"]
       for (const queue of queues) {
         await rabbitMQService.getChannel(queue)
       }
-    // rabbitMQService.getChannel("NEW_TOKENS")
-    //   await rabbitMQService.close()
 
     } catch (error) 
     {
