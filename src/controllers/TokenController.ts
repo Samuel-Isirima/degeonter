@@ -253,7 +253,10 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     const marketCapResult: string | undefined = await marketCapHistory(tokenDetails) || ''
     const tokenDistributionResult: string | undefined = await tokenDistribution(marketCapResult) || ''
 
+    
     const tokenResults: TokenQueueMessageInterface = JSON.parse(tokenDistributionResult)
+    console.log('TOKEN RESULTS')
+    console.log(tokenResults)
 
     //For marketcap filter
     const marketCapFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
@@ -264,8 +267,8 @@ export const tokenDistribution = async ( queueMessage: string ) =>
 
 
     //Send to the buy queue if the token passes the filters
-    if(!cannotBuy)
-      rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenDetails))
+    // if(!cannotBuy)
+      rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenResults))
 
   }
 
