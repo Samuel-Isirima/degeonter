@@ -4,8 +4,8 @@ query MyQuery {
   Solana(dataset: realtime, network: solana) {
     Instructions(
       where: {Transaction: {Result: {Success: true}}, Instruction: {Program: {Address: {is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, Method: {in: ["initializeMint", "initializeMint2", "initializeMint3", "pump", "create"]}}}}
-      orderBy: {ascending: Block_Time}
-      limit: {count: 5}
+      orderBy: {descending: Block_Time}
+      limit: {count: 50}
     ) {
       Block {
         Date

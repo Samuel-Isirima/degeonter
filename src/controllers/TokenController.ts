@@ -10,6 +10,7 @@ import rabbitMQService from '../services/rabbitmq.service';
 
 export const fetchLatestCoins = async () => 
 {
+  console.log('called fetch latest coins')
    const api_key = process.env.API_KEY
    const graphqlEndpoint = process.env.API_ENDPOINT || ''
    // Define the request payload
@@ -35,7 +36,8 @@ export const fetchLatestCoins = async () =>
   }
   //We get the dev's wallet from the result of this query
   let api_response_data = api_call_response.data.data.Solana.Instructions
-
+  console.log('API response fetched, going to wait 30 seconds now before sending to queue')
+  console.log(api_response_data)
   //At this point, the data is an array of data that looks like this
   /**
    * [
@@ -66,7 +68,7 @@ export const fetchLatestCoins = async () =>
             }
         }]
    */
-
+      await new Promise((resolve) => setTimeout(resolve, 60000)) // Wait 1 minute for transactions to build to weed out quick one buy rugs
    // Loop through the response and create interface instances
    api_response_data.forEach(async (entry) => {
     // Map the response to the interface
@@ -139,17 +141,17 @@ export const marketCapHistory = async ( queueMessage: string ) =>
     */
 
 
-   if(importantMCData.latestTime.market_cap < 10_000)
+   if(importantMCData.latestTime.market_cap < 6_000)
    {
     //Essentially, never buying any coin with less than 15k mc. It could be a regular rug pull
     marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token Market Cap less than $15k"] 
+    marketCapFilter.comment = ["❌ Token Market Cap less than $6k"] 
    }
    else
    {
     //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
     marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token Market Cap above $10k"] 
+    marketCapFilter.comment = ["✅ Token Market Cap above $6k"] 
    }
 
    if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)
@@ -163,15 +165,15 @@ export const marketCapHistory = async ( queueMessage: string ) =>
     marketCapFilter.comment = ["✅ Token ATH was over less minutes ago. Token may be able to recover"]
    }
 
-   if(importantMCData.latestTime.market_cap < (0.7 * importantMCData.highestMarketCap.market_cap))
+   if(importantMCData.latestTime.market_cap < (0.5 * importantMCData.highestMarketCap.market_cap))
    {
     marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token Market Cap has fallen below 70% of ATH. Token is dying"]    //coin is dying
+    marketCapFilter.comment = ["❌ Token Market Cap has fallen below 50% of ATH. Token is dying"]    //coin is dying
    }
    else
    {
     marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token Market Cap is still above 70% of ATH. Token may be able to recover"]
+    marketCapFilter.comment = ["✅ Token Market Cap is still above 50% of ATH. Token may be able to recover"]
    }
 
    
@@ -251,19 +253,20 @@ export const tokenDistribution = async ( queueMessage: string ) =>
 
     // delay(5000)
     const marketCapResult: string | undefined = await marketCapHistory(tokenDetails) || ''
-    const tokenDistributionResult: string | undefined = await tokenDistribution(marketCapResult) || ''
+    console.log(marketCapResult)
+    // const tokenDistributionResult: string | undefined = await tokenDistribution(marketCapResult) || ''
 
     
-    const tokenResults: TokenQueueMessageInterface = JSON.parse(tokenDistributionResult)
+    const tokenResults: TokenQueueMessageInterface = JSON.parse(marketCapResult)
     console.log('TOKEN RESULTS')
     console.log(tokenResults)
 
     //For marketcap filter
     const marketCapFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
-    const distributionFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
+    // const distributionFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
 
     //foreach of these, if is false, exit
-    const cannotBuy = marketCapFilterCanBuy.some(val => val === false) && distributionFilterCanBuy.some(val => val === false);
+    const cannotBuy = marketCapFilterCanBuy.some(val => val === false)
 
 
     //Send to the buy queue if the token passes the filters
