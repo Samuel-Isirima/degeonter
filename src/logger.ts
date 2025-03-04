@@ -1,12 +1,6 @@
 import winston from 'winston';
 import path from 'path';
 import fs from 'fs';
-import axios from 'axios';
-
-// Telegram bot setup
-const TELEGRAM_BOT_TOKEN = '7769213897:AAG_hmRYzh793TC7XfVQFPwlyObs7LxnoZ8';
-const TELEGRAM_CHAT_ID = '5521041325';
-const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
 // Get current directory (CommonJS-friendly)
 const l__dirname = path.resolve(); // No `import.meta.url` needed
@@ -35,43 +29,17 @@ const logger = winston.createLogger({
   ],
 });
 
-// Function to send logs to Telegram
-const sendToTelegram = async (message: string) => {
-  try {
-    await axios.post(TELEGRAM_API_URL, {
-      chat_id: TELEGRAM_CHAT_ID,
-      text: message,
-    });
-  } catch (error) {
-    console.error('Error sending log to Telegram:', error);
-  }
-};
-
-// Override console.log and console.error
-console.log = (...args) => {
-  const message = args.join(' ');
-  logger.info(message);
-  sendToTelegram(`[LOG] ${message}`);
-};
-
-console.error = (...args) => {
-  const message = args.join(' ');
-  logger.error(message);
-  sendToTelegram(`[ERROR] ${message}`);
-};
+// Redirect console.log and console.error to Winston
+console.log = (...args) => logger.info(args.join(' '));
+console.error = (...args) => logger.error(args.join(' '));
 
 // Capture uncaught exceptions and unhandled rejections
 process.on('uncaughtException', (err) => {
-  const errorMessage = `Uncaught Exception: ${err.stack || err.message}`;
-  logger.error(errorMessage);
-  sendToTelegram(errorMessage);
+  logger.error(`Uncaught Exception: ${err.stack || err.message}`);
   process.exit(1);
 });
-
 process.on('unhandledRejection', (reason) => {
-  const errorMessage = `Unhandled Rejection: ${reason}`;
-  logger.error(errorMessage);
-  sendToTelegram(errorMessage);
+  logger.error(`Unhandled Rejection: ${reason}`);
 });
 
 export default logger;
