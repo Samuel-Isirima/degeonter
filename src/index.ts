@@ -4,6 +4,7 @@ import express, { Application, Request, Response } from 'express'
 import routes from './routes';
 import rabbitMQService, { startQueueProcessors } from './services/rabbitmq.service';
 import { fetchLatestCoins, processToken } from './controllers/TokenController';
+import './logger';
 
 const app: Application = express()
 const port = process.env.APP_PORT || 3000

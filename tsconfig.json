@@ -107,6 +107,6 @@
     "skipLibCheck": true,                                 /* Skip type checking all .d.ts files. */
     "typeRoots": ["./@types"]
   },
-  "include": ["src/**/*.ts", "@types/**/*.d.ts"],
+  "include": ["src/**/*.ts", "@types/**/*.d.ts", "src/logger.ts"],
   
 }
