@@ -1,6 +1,6 @@
-export const parseTokenMarketCapHistoryAPIResponse = (response) => {
+export const parseTokenMarketCapHistoryAPIResponse = (trades) => {
     // Access the list of trades
-    const trades = response.Solana.DEXTradeByTokens;
+    // const trades = response.Solana.DEXTradeByTokens;
   
     // Map each trade to the desired format
     const result = trades.map(trade => ({

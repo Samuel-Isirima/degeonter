@@ -5,7 +5,7 @@ query MyQuery {
     Instructions(
       where: {Transaction: {Result: {Success: true}}, Instruction: {Program: {Address: {is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, Method: {in: ["initializeMint", "initializeMint2", "initializeMint3", "pump", "create"]}}}}
       orderBy: {descending: Block_Time}
-      limit: {count: 50}
+      limit: {count: 100}
     ) {
       Block {
         Date
@@ -123,14 +123,14 @@ export const GET_TOKEN_CURRENT_PRICE = (tokenMint: string) => `
 //This query gets the price of the token for the last 10 transactions
 //Returns empty if there has been no trades on this coin today
 
-export const GET_TOKEN_MARKET_CAP_HISTORY = (tokenMint: string, startTime = getTimeOneHourAgo()) => ` 
+export const GET_TOKENS_MARKET_CAP_HISTORY = (tokenMints: string, startTime = getTimeOneHourAgo()) => ` 
 
 
 query HistoricalMarketCap {
   Solana {
     DEXTradeByTokens(
-      limit: {count: 1000}
-      where: {Trade: {Currency: {MintAddress: {is: "${tokenMint}"}}}, Block: {Time: {after: "${startTime}"}}}
+      limit: {count: 100000}
+      where: {Trade: {Currency: {MintAddress: {in: [${tokenMints}]}}}, Block: {Time: {after: "${startTime}"}}}
       orderBy: {descending: Block_Time}
     ) {
       Block {
@@ -141,6 +141,10 @@ query HistoricalMarketCap {
         PriceInUSD
         Currency {
           Name
+          MintAddress
+          Symbol
+          IsMutable
+          ProgramAddress
         }
       }
     }

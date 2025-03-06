@@ -1,15 +1,19 @@
 import axios from 'axios';
 const dotenv = require('dotenv');
 dotenv.config();
-import { GET_DEV_PREVIOUS_PROJECTS, GET_LATEST_TOKENS_CREATED, GET_TOKEN_DISTRIBUTION, GET_TOKEN_MARKET_CAP_HISTORY, GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS} from '../graphql/queries/tokenQueries';
+import { GET_DEV_PREVIOUS_PROJECTS, GET_LATEST_TOKENS_CREATED, GET_TOKENS_MARKET_CAP_HISTORY, GET_TOKEN_DISTRIBUTION, GET_TRADE_HISTORY_FOR_MULTIPLE_TOKENS} from '../graphql/queries/tokenQueries';
 import { getImportantTradeData, parseTokenMarketCapHistoryAPIResponse } from '../methods/marketCap';
 import rabbitmqService, { TokenQueueMessageInterface } from '../services/rabbitmq.service';
 import { calculateTokenHoldings } from '../methods/tokenHolders';
 import Token from '../models/Token';
 import rabbitMQService from '../services/rabbitmq.service';
 
+
 export const fetchLatestCoins = async () => 
 {
+  var tokens_array: any[] = []
+  var token_mints_array: any[] = []
+
   console.log('called fetch latest coins')
    const api_key = process.env.API_KEY
    const graphqlEndpoint = process.env.API_ENDPOINT || ''
@@ -68,20 +72,25 @@ export const fetchLatestCoins = async () =>
             }
         }]
    */
-      await new Promise((resolve) => setTimeout(resolve, 60000)) // Wait 1 minute for transactions to build to weed out quick one buy rugs
+      // await new Promise((resolve) => setTimeout(resolve, 60000)) // Wait 1 minute for transactions to build to weed out quick one buy rugs
    // Loop through the response and create interface instances
    api_response_data.forEach(async (entry) => {
     // Map the response to the interface
-    const message: TokenQueueMessageInterface = {
+    const token = {
       payload: entry,
       blockTime: entry.Block.Time,
       devAddress: entry.Transaction.Signer || "",
       tokenMint: entry.Instruction.Accounts[0]?.Token.Mint || "",
       filters: {}
     }
-    await rabbitmqService.sendToQueue("NEW_TOKENS", JSON.stringify(message))
+
+    //put it into an array
+    tokens_array.push(token)
+    token_mints_array.push(token.tokenMint)
+
   })
 
+  await rabbitMQService.sendToQueue("NEW_TOKENS", JSON.stringify(token_mints_array))
 
 }
 
@@ -89,16 +98,14 @@ export const fetchLatestCoins = async () =>
 export const marketCapHistory = async ( queueMessage: string ) => 
 {
 
-  var tokenObject: TokenQueueMessageInterface = JSON.parse(queueMessage)
-  const tokenMint = tokenObject.tokenMint
-
-  var marketCapFilter = {canBuy: [true], comment: [""], data: {}}
+  var tokenMintsArray = JSON.parse(queueMessage)
+  var marketCapFilter = {token: {}, canBuy: [true], comment: [""], data: {}}
   const api_key = process.env.API_KEY
   const graphqlEndpoint = process.env.API_ENDPOINT || ''
   
   // Define the request payload
   const payload = {
-    query: GET_TOKEN_MARKET_CAP_HISTORY(tokenMint)
+    query: GET_TOKENS_MARKET_CAP_HISTORY(arrayToQuotedCSV(tokenMintsArray))
   };
 
   try {
@@ -110,77 +117,40 @@ export const marketCapHistory = async ( queueMessage: string ) =>
       }
     });
 
-    // console.log('MCH API PAYLOAD')
-    // console.log(payload)
+    // console.log("MCH API PAYLOAD", JSON.stringify(payload, null, 2));
 
 
-    // console.log('MCH API RESPONSE')
-    // console.log(response.data.data)
 
-    // Store the response data in a variable
-    const response_data = response.data.data;
-    //Now get the market cap details at various times
-    const marketCapHistory = parseTokenMarketCapHistoryAPIResponse(response_data);
-    // console.log('MARKET CAP HISTORY RESULT')
-    // console.log(marketCapHistory)
-    const importantMCData = getImportantTradeData(marketCapHistory);
+    console.log("MCH API response", JSON.stringify(response.data, null, 2));
 
-    /*
-    Here now for our algo
-    The target of this project is not to get 100m runner projects but to get a 2x, 3x and at the most 5x from early launches
-    before they die or get rugged, ofcourse based on filters
-    So if a coin has already done a 3x or 4x, we'd skip through it
-    Hence
-    if MC < 80% ATH, coin is already dying; we skip
+    const tokenTradesGroupedByMintAddress = response.data.data.Solana.DEXTradeByTokens.reduce((acc, item) => {
+      const mintAddress = item.Trade.Currency.MintAddress;
+      
+      if (!acc[mintAddress]) {
+        acc[mintAddress] = [];
+      }
+      
+      acc[mintAddress].push(item);
+      
+      return acc;
+    }, {});
     
+    //Now, for each mintAddress in the group, run the processing
+    // Log each group separately
+    Object.entries(tokenTradesGroupedByMintAddress).forEach(([mintAddress, trades]) => {
+      console.log(`Mint Address: ${mintAddress}`);
+      console.log(JSON.stringify(trades, null, 2));
+      console.log("--------------------------------------------------");
+      processMarketCapForSingleToken(mintAddress, trades)
+    });
 
-    Scratch that. The algo should be based on time
-    If ATH timestamp > 5 minutes { and MC < 80% ATH } { and ATH > $10k}
-    If coin is older than 10m, don't buy
-
-    */
-
-
-   if(importantMCData.latestTime.market_cap < 6_000)
-   {
-    //Essentially, never buying any coin with less than 15k mc. It could be a regular rug pull
-    marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token Market Cap less than $6k"] 
-   }
-   else if(importantMCData.latestTime.market_cap > 6_000 && importantMCData.latestTime.market_cap < 21_000)
-   {
-    //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
-    marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token Market Cap above $6k and less than $21k"] 
-   }
-
-   if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)
-   {
-    marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token ATH was over 4 minutes ago. Token may be dying"] 
-   }
-   else
-   {
-    marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token ATH was over less minutes ago. Token may be able to recover"]
-   }
-
-   if(importantMCData.latestTime.market_cap < (0.5 * importantMCData.highestMarketCap.market_cap))
-   {
-    marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token Market Cap has fallen below 50% of ATH. Token is dying"]    //coin is dying
-   }
-   else
-   {
-    marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token Market Cap is still above 50% of ATH. Token may be able to recover"]
-   }
-
+    return
+    
    
   //For time difference in minutes
   marketCapFilter.data = { marketCap: importantMCData.latestTime.market_cap }
-  tokenObject.filters.marketCapFilter = marketCapFilter
-  return JSON.stringify(tokenObject)
+  // tokenObject.filters.marketCapFilter = marketCapFilter
+  // return JSON.stringify(tokenObject)
   }
   catch(error)
   {
@@ -252,29 +222,100 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     console.log("IN PROCESS TOKEN METHOD")
 
     // delay(5000)
-    const marketCapResult: string | undefined = await marketCapHistory(tokenDetails) || ''
-    console.log(marketCapResult)
+    // const marketCapResult: string | undefined = 
+    await marketCapHistory(tokenDetails)
+    // console.log(marketCapResult)
     // const tokenDistributionResult: string | undefined = await tokenDistribution(marketCapResult) || ''
 
     
-    const tokenResults: TokenQueueMessageInterface = JSON.parse(marketCapResult)
-    console.log('TOKEN RESULTS')
-    console.log(tokenResults)
+    // const tokenResults: TokenQueueMessageInterface = JSON.parse(marketCapResult)
+    // console.log('TOKEN RESULTS')
+    // console.log(tokenResults)
 
-    //For marketcap filter
-    const marketCapFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
-    // const distributionFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
+    // //For marketcap filter
+    // const marketCapFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
+    // // const distributionFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
 
-    //foreach of these, if is false, exit
-    const cannotBuy = marketCapFilterCanBuy.some(val => val === false)
+    // //foreach of these, if is false, exit
+    // const cannotBuy = marketCapFilterCanBuy.some(val => val === false)
 
 
-    //Send to the buy queue if the token passes the filters
-    if(!cannotBuy)
-      await rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenResults))
+    // //Send to the buy queue if the token passes the filters
+    // if(!cannotBuy)
+    //   await rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenResults))
 
   }
 
 
   const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
+  function arrayToQuotedCSV(array) {
+    return array.map(item => `"${item}"`).join(',');
+  }
+
+  const processMarketCapForSingleToken = (mintAddress, tokenData) => 
+  {
+  var marketCapFilter = {token: {mintAddress: mintAddress}, canBuy: [true], comment: [""], data: {}}
+     //Now get the market cap details at various times
+    const marketCapHistory = parseTokenMarketCapHistoryAPIResponse(tokenData);
+    // console.log('MARKET CAP HISTORY RESULT')
+    // console.log(marketCapHistory)
+    const importantMCData = getImportantTradeData(marketCapHistory);
+
+    /*
+    Here now for our algo
+    The target of this project is not to get 100m runner projects but to get a 2x, 3x and at the most 5x from early launches
+    before they die or get rugged, ofcourse based on filters
+    So if a coin has already done a 3x or 4x, we'd skip through it
+    Hence
+    if MC < 80% ATH, coin is already dying; we skip
+    
+
+    Scratch that. The algo should be based on time
+    If ATH timestamp > 5 minutes { and MC < 80% ATH } { and ATH > $10k}
+    If coin is older than 10m, don't buy
+
+    */
+
+
+   if(importantMCData.latestTime.market_cap < 6_000)
+   {
+    //Essentially, never buying any coin with less than 15k mc. It could be a regular rug pull
+    marketCapFilter.canBuy.push(false)
+    marketCapFilter.comment = ["❌ Token Market Cap less than $6k"] 
+   }
+   else if(importantMCData.latestTime.market_cap > 6_000 && importantMCData.latestTime.market_cap < 21_000)
+   {
+    //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
+    marketCapFilter.canBuy.push(true)
+    marketCapFilter.comment = ["✅ Token Market Cap above $6k and less than $21k"] 
+   }
+
+   if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)
+   {
+    marketCapFilter.canBuy.push(false)
+    marketCapFilter.comment = ["❌ Token ATH was over 4 minutes ago. Token may be dying"] 
+   }
+   else
+   {
+    marketCapFilter.canBuy.push(true)
+    marketCapFilter.comment = ["✅ Token ATH was over less minutes ago. Token may be able to recover"]
+   }
+
+   if(importantMCData.latestTime.market_cap < (0.5 * importantMCData.highestMarketCap.market_cap))
+   {
+    marketCapFilter.canBuy.push(false)
+    marketCapFilter.comment = ["❌ Token Market Cap has fallen below 50% of ATH. Token is dying"]    //coin is dying
+   }
+   else
+   {
+    marketCapFilter.canBuy.push(true)
+    marketCapFilter.comment = ["✅ Token Market Cap is still above 50% of ATH. Token may be able to recover"]
+   }
+
+   
+  //For time difference in minutes
+  marketCapFilter.data = { marketCap: importantMCData.latestTime.market_cap }
+  // tokenObject.filters.marketCapFilter = marketCapFilter
+  // return JSON.stringify(tokenObject
+  }
