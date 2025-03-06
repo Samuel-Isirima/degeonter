@@ -238,17 +238,23 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     const importantMCData = getImportantTradeData(marketCapHistory);
 
 
-   if(importantMCData.latestTime.market_cap < 6_000)
+   if(importantMCData.latestTime.market_cap < 8_000)
    {
     //Essentially, never buying any coin with less than 15k mc. It could be a regular rug pull
     marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token Market Cap less than $6k"] 
+    marketCapFilter.comment = ["❌ Token Market Cap less than $8k"] 
    }
-   else if(importantMCData.latestTime.market_cap > 6_000 && importantMCData.latestTime.market_cap < 21_000)
+   else if(importantMCData.latestTime.market_cap > 8_000 && importantMCData.latestTime.market_cap < 21_000)
    {
     //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
     marketCapFilter.canBuy.push(true)
     marketCapFilter.comment = ["✅ Token Market Cap above $6k and less than $21k"] 
+   }
+   else
+   {
+     //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
+     marketCapFilter.canBuy.push(false)
+     marketCapFilter.comment = ["❌ Token Market Cap above $21k"] 
    }
 
    if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)

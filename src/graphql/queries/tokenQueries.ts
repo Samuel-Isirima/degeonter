@@ -3,7 +3,7 @@ export const GET_LATEST_TOKENS_CREATED = `
 query MyQuery {
   Solana(dataset: realtime, network: solana) {
     Instructions(
-      where: {Transaction: {Result: {Success: true}}, Instruction: {Program: {Address: {is: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, Method: {in: ["initializeMint", "initializeMint2", "initializeMint3", "pump", "create"]}}}}
+      where: {Transaction: {Result: {Success: true}}, Instruction: {Program: {Name: {is: "pump"}, Method: {in: ["initializeMint", "initializeMint2", "initializeMint3", "pump", "create"]}}}}
       orderBy: {descending: Block_Time}
       limit: {count: 100}
     ) {
