@@ -72,7 +72,6 @@ export const fetchLatestCoins = async () =>
             }
         }]
    */
-      // await new Promise((resolve) => setTimeout(resolve, 60000)) // Wait 1 minute for transactions to build to weed out quick one buy rugs
    // Loop through the response and create interface instances
    api_response_data.forEach(async (entry) => {
     // Map the response to the interface
@@ -89,6 +88,9 @@ export const fetchLatestCoins = async () =>
     token_mints_array.push(token.tokenMint)
 
   })
+
+  console.log('Going to wait 20 seconds for transactions to build before processing tokens market caps')
+  await new Promise((resolve) => setTimeout(resolve, 20000)) // Wait 20 seconnds for transactions to build to weed out quick one buy rugs
 
   await rabbitMQService.sendToQueue("NEW_TOKENS", JSON.stringify(token_mints_array))
 
