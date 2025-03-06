@@ -99,7 +99,7 @@ export const marketCapHistory = async ( queueMessage: string ) =>
 {
 
   var tokenMintsArray = JSON.parse(queueMessage)
-  var marketCapFilter = {token: {}, canBuy: [true], comment: [""], data: {}}
+  var marketCapFilters = [{token: {}, canBuy: [true], comment: [""], data: {}}]
   const api_key = process.env.API_KEY
   const graphqlEndpoint = process.env.API_ENDPOINT || ''
   
@@ -117,40 +117,34 @@ export const marketCapHistory = async ( queueMessage: string ) =>
       }
     });
 
-    // console.log("MCH API PAYLOAD", JSON.stringify(payload, null, 2));
-
-
-
-    console.log("MCH API response", JSON.stringify(response.data, null, 2));
 
     const tokenTradesGroupedByMintAddress = response.data.data.Solana.DEXTradeByTokens.reduce((acc, item) => {
-      const mintAddress = item.Trade.Currency.MintAddress;
-      
+    const mintAddress = item.Trade.Currency.MintAddress;
       if (!acc[mintAddress]) {
         acc[mintAddress] = [];
       }
-      
       acc[mintAddress].push(item);
-      
       return acc;
     }, {});
     
     //Now, for each mintAddress in the group, run the processing
     // Log each group separately
-    Object.entries(tokenTradesGroupedByMintAddress).forEach(([mintAddress, trades]) => {
-      console.log(`Mint Address: ${mintAddress}`);
-      console.log(JSON.stringify(trades, null, 2));
-      console.log("--------------------------------------------------");
-      processMarketCapForSingleToken(mintAddress, trades)
-    });
+    for (const [mintAddress, trades] of Object.entries(tokenTradesGroupedByMintAddress)) {
+      console.log(`-------------------------------------------------- PROCESSING for ${mintAddress} -------------------------------------------------- `);
+      
+      // Ensure processMarketCapForSingleToken is an async function if needed
+      var mc_result = await processMarketCapForSingleToken(mintAddress, trades);
+      
+      const cannotBuy = mc_result.canBuy.some(val => val === false)
 
-    return
+
+      //Send to the buy queue if the token passes the filters
+      if(!cannotBuy)
+        await rabbitMQService.sendToQueue("BUY", JSON.stringify(mc_result));
+    }
+
     
    
-  //For time difference in minutes
-  marketCapFilter.data = { marketCap: importantMCData.latestTime.market_cap }
-  // tokenObject.filters.marketCapFilter = marketCapFilter
-  // return JSON.stringify(tokenObject)
   }
   catch(error)
   {
@@ -220,29 +214,8 @@ export const tokenDistribution = async ( queueMessage: string ) =>
   export const processToken = async (tokenDetails : string) =>
   {
     console.log("IN PROCESS TOKEN METHOD")
-
-    // delay(5000)
-    // const marketCapResult: string | undefined = 
     await marketCapHistory(tokenDetails)
-    // console.log(marketCapResult)
-    // const tokenDistributionResult: string | undefined = await tokenDistribution(marketCapResult) || ''
-
-    
-    // const tokenResults: TokenQueueMessageInterface = JSON.parse(marketCapResult)
-    // console.log('TOKEN RESULTS')
-    // console.log(tokenResults)
-
-    // //For marketcap filter
-    // const marketCapFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
-    // // const distributionFilterCanBuy = tokenResults.filters.marketCapFilter.canBuy
-
-    // //foreach of these, if is false, exit
-    // const cannotBuy = marketCapFilterCanBuy.some(val => val === false)
-
-
-    // //Send to the buy queue if the token passes the filters
-    // if(!cannotBuy)
-    //   await rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenResults))
+   
 
   }
 
@@ -255,27 +228,12 @@ export const tokenDistribution = async ( queueMessage: string ) =>
 
   const processMarketCapForSingleToken = (mintAddress, tokenData) => 
   {
-  var marketCapFilter = {token: {mintAddress: mintAddress}, canBuy: [true], comment: [""], data: {}}
-     //Now get the market cap details at various times
+    var marketCapFilter = {token: {mintAddress: mintAddress}, canBuy: [true], comment: [""], data: {}}
+    //Now get the market cap details at various times
     const marketCapHistory = parseTokenMarketCapHistoryAPIResponse(tokenData);
     // console.log('MARKET CAP HISTORY RESULT')
     // console.log(marketCapHistory)
     const importantMCData = getImportantTradeData(marketCapHistory);
-
-    /*
-    Here now for our algo
-    The target of this project is not to get 100m runner projects but to get a 2x, 3x and at the most 5x from early launches
-    before they die or get rugged, ofcourse based on filters
-    So if a coin has already done a 3x or 4x, we'd skip through it
-    Hence
-    if MC < 80% ATH, coin is already dying; we skip
-    
-
-    Scratch that. The algo should be based on time
-    If ATH timestamp > 5 minutes { and MC < 80% ATH } { and ATH > $10k}
-    If coin is older than 10m, don't buy
-
-    */
 
 
    if(importantMCData.latestTime.market_cap < 6_000)
@@ -316,6 +274,5 @@ export const tokenDistribution = async ( queueMessage: string ) =>
    
   //For time difference in minutes
   marketCapFilter.data = { marketCap: importantMCData.latestTime.market_cap }
-  // tokenObject.filters.marketCapFilter = marketCapFilter
-  // return JSON.stringify(tokenObject
+  return marketCapFilter
   }
