@@ -56,8 +56,8 @@ startPullingNewTokens()
 async function startPullingNewTokens() {
     while (true) {
       await fetchLatestCoins(); // Wait for the function to finish
-      console.log("Waiting 300 seconds before the next call...")
-      await new Promise((resolve) => setTimeout(resolve, 300000)) // Wait 7 seconds
+      console.log("Waiting one minute before the next call...")
+      await new Promise((resolve) => setTimeout(resolve, 60000)) // Wait one minute second
     }
 }
   
