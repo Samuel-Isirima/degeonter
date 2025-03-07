@@ -42,36 +42,7 @@ export const fetchLatestCoins = async () =>
   let api_response_data = api_call_response.data.data.Solana.Instructions
   console.log('API response fetched, going to wait 30 seconds now before sending to queue')
   console.log(api_response_data)
-  //At this point, the data is an array of data that looks like this
-  /**
-   * [
-        {
-            "Block": {
-                "Date": "2024-12-25",
-                "Time": "2024-12-25T15:06:50Z"
-            },
-            "Instruction": {
-                "Accounts": [
-                    {
-                        "Address": "5L4ha3NaMy9xZztSFVAWFhjsig3KqmNBZ4TJ2iXMpump",
-                        "Token": {
-                            "Mint": "5L4ha3NaMy9xZztSFVAWFhjsig3KqmNBZ4TJ2iXMpump",
-                            "Owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-                        }
-                    }
-                ],
-                "Program": {
-                    "AccountNames": [
-                        "mint"
-                    ]
-                }
-            },
-            "Transaction": {
-                "Signature": "WacTdhdNcTcNzLiTEgJD61UJXsEKejHudkmd1c6wntK4kxKanUMynrWtynRMV1MSm7vuzF75DkpUafWoYBndF83",
-                "Signer": "EzgcgmJNF2zEQHAdgfds3BphQZv8P5Yx3AzA4Cqu1grC"
-            }
-        }]
-   */
+ 
    // Loop through the response and create interface instances
    api_response_data.forEach(async (entry) => {
     // Map the response to the interface
@@ -90,7 +61,7 @@ export const fetchLatestCoins = async () =>
   })
 
   console.log('Going to wait 30 seconds for transactions to build before processing tokens market caps')
-  await new Promise((resolve) => setTimeout(resolve, 30000)) // Wait 30 seconnds for transactions to build to weed out quick one buy rugs
+  // await new Promise((resolve) => setTimeout(resolve, 30000)) // Wait 30 seconnds for transactions to build to weed out quick one buy rugs
 
   await rabbitMQService.sendToQueue("NEW_TOKENS", JSON.stringify(token_mints_array))
 
@@ -238,23 +209,23 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     const importantMCData = getImportantTradeData(marketCapHistory);
 
 
-   if(importantMCData.latestTime.market_cap < 8_000)
+   if(importantMCData.latestTime.market_cap < 15_000)
    {
     //Essentially, never buying any coin with less than 15k mc. It could be a regular rug pull
     marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token Market Cap less than $8k"] 
+    marketCapFilter.comment = ["❌ Token Market Cap less than $15k"] 
    }
-   else if(importantMCData.latestTime.market_cap > 8_000 && importantMCData.latestTime.market_cap < 21_000)
+   else if(importantMCData.latestTime.market_cap > 15_000 && importantMCData.latestTime.market_cap < 41_000)
    {
     //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
     marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token Market Cap above $6k and less than $21k"] 
+    marketCapFilter.comment = ["✅ Token Market Cap above $15k and less than $41k"] 
    }
    else
    {
      //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
      marketCapFilter.canBuy.push(false)
-     marketCapFilter.comment = ["❌ Token Market Cap above $21k"] 
+     marketCapFilter.comment = ["❌ Token Market Cap above $41k"] 
    }
 
    if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)
