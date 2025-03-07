@@ -225,7 +225,7 @@ export const GET_TOKEN_DISTRIBUTION = (tokenAddress: string) => `
 query MyQuery {
   Solana {
     BalanceUpdates(
-      limit: {count: 20} 
+      limit: {count: 100} 
       orderBy: {descendingByField: "TotalHolding"}
       where: {BalanceUpdate: {Currency: {MintAddress: {is: "${tokenAddress}"}}}}
     ) {

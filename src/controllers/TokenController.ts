@@ -113,7 +113,7 @@ export const marketCapHistory = async ( queueMessage: string ) =>
 
       //Send to the buy queue if the token passes the filters
       if(!cannotBuy)
-        await rabbitMQService.sendToQueue("BUY", JSON.stringify(mc_result));
+        await rabbitMQService.sendToQueue("MARKET_CAP_PROCESSED", JSON.stringify(mc_result));
     }
 
     
@@ -130,8 +130,11 @@ export const marketCapHistory = async ( queueMessage: string ) =>
 export const tokenDistribution = async ( queueMessage: string ) => 
 {
 
-  var tokenObject: TokenQueueMessageInterface = JSON.parse(queueMessage)
-  const tokenMint = tokenObject.tokenMint
+  var tokenObject = JSON.parse(queueMessage)
+  //var marketCapFilter = {token: {mintAddress: mintAddress}, canBuy: [true], comment: [""], data: {}}
+  //
+  const tokenMint = tokenObject.token.mintAddress
+
   var distributionFilter = {canBuy: [true], comment: [""]}
   
   const api_key = process.env.API_KEY
@@ -152,13 +155,28 @@ export const tokenDistribution = async ( queueMessage: string ) =>
       }
     });
 
+    
     //console.log(response.data.data)
     const [addressHoldings, ownerHoldings] = calculateTokenHoldings(response.data.data)
     
+    //Get number of holders
+    var totalHolders = ownerHoldings.length
+    if(totalHolders < 5)
+    {
+      distributionFilter.canBuy.push(false)
+      distributionFilter.comment = ["❌ Token has less than 5 holders. Potential rug."] 
+    }
+    else
+    {
+      distributionFilter.canBuy.push(true)
+      distributionFilter.comment = ["✅ Token has more than 5 holders"]
+    }
+
     //For each owner holdings, apart from the first one which is always the bonding curve, if any other owner accounts hold more than 3%, flag
     // Filter entries with percentage > 2
     const holdersWithMoreThan2Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 2);
-    console.log(ownerHoldings)
+    console.log("holders with more than 2 percent")
+    console.log(JSON.stringify(holdersWithMoreThan2Percent))
 
     if(holdersWithMoreThan2Percent.length > 6)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
     {
@@ -168,8 +186,16 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     else
     {
       distributionFilter.canBuy.push(true)
-      distributionFilter.comment = ["✅ Only one wallet holding over 3% of the total supply of the token | The bonding curve wallet"] 
+      distributionFilter.comment = ["✅ Only one wallet holding over 2% of the total supply of the token | The bonding curve wallet"] 
     }
+
+
+    const cannotBuy = distributionFilter.canBuy.some(val => val === false)
+
+
+    //Send to the buy queue if the token passes the filters
+    if(!cannotBuy)
+      await rabbitMQService.sendToQueue("BUY", JSON.stringify(tokenObject));
 
   }
   catch (error) 
@@ -177,8 +203,9 @@ export const tokenDistribution = async ( queueMessage: string ) =>
   console.error('Error executing query:', error)
   }
 
-  tokenObject.filters.distributionFilter = distributionFilter
-  return JSON.stringify(tokenObject)
+  
+
+  
 }
 
 
@@ -188,8 +215,6 @@ export const tokenDistribution = async ( queueMessage: string ) =>
   {
     console.log("IN PROCESS TOKEN METHOD")
     await marketCapHistory(tokenDetails)
-   
-
   }
 
 

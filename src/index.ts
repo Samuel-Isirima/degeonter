@@ -3,7 +3,7 @@ require('dotenv').config();
 import express, { Application, Request, Response } from 'express'
 import routes from './routes';
 import rabbitMQService, { startQueueProcessors } from './services/rabbitmq.service';
-import { fetchLatestCoins, processToken } from './controllers/TokenController';
+import { fetchLatestCoins, processToken, tokenDistribution } from './controllers/TokenController';
 import './logger';
 
 const app: Application = express()
@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 (async () => {
     try {
       await rabbitMQService.connect()
-      const queues = ["NEW_TOKENS", "BUY"]
+      const queues = ["NEW_TOKENS", "MARKET_CAP_PROCESSED", "BUY"]
       for (const queue of queues) {
         await rabbitMQService.getChannel(queue)
       }
@@ -68,6 +68,10 @@ async function startPullingNewTokens() {
       {
         queueName: "NEW_TOKENS",
         processor: processToken
+      },
+      {
+        queueName: "MARKET_CAP_PROCESSED",
+        processor: tokenDistribution
       }
     ]);
 })();
