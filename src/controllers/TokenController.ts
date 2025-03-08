@@ -173,19 +173,34 @@ export const tokenDistribution = async ( queueMessage: string ) =>
 
     //For each owner holdings, apart from the first one which is always the bonding curve, if any other owner accounts hold more than 3%, flag
     // Filter entries with percentage > 2
-    const holdersWithMoreThan2Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 2);
-    console.log("holders with more than 2 percent")
-    console.log(JSON.stringify(holdersWithMoreThan2Percent))
-
-    if(holdersWithMoreThan2Percent.length > 6)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
+    const holdersWithMoreThan5Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 5);
+    console.log("holders with more than 5 percent")
+    console.log(JSON.stringify(holdersWithMoreThan5Percent))
+    
+    if(holdersWithMoreThan5Percent.length > 0)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
     {
       distributionFilter.canBuy.push(true)
-      distributionFilter.comment = ["❌ More than six wallets holding over 2% of the total supply of the token"] 
+      distributionFilter.comment = ["❌ There is/are [a] wallet[s] holding over 5% of the total supply of the token"] 
     }
     else
     {
       distributionFilter.canBuy.push(true)
-      distributionFilter.comment = ["✅ Only one wallet holding over 2% of the total supply of the token | The bonding curve wallet"] 
+      distributionFilter.comment = ["✅ No wallets holding over 5% of the token"] 
+    }
+
+    const holdersWithMoreThan2Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 2);
+    console.log("holders with more than 2 percent")
+    console.log(JSON.stringify(holdersWithMoreThan2Percent))
+
+    if(holdersWithMoreThan2Percent.length > 5)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
+    {
+      distributionFilter.canBuy.push(false)
+      distributionFilter.comment = ["❌ More than four wallets holding over 2% of the total supply of the token"] 
+    }
+    else
+    {
+      distributionFilter.canBuy.push(true)
+      distributionFilter.comment = ["✅ under four wallets holding over 2% of the total supply of the token | The bonding curve wallet"] 
     }
 
 
