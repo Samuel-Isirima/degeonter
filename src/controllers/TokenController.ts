@@ -60,7 +60,6 @@ export const fetchLatestCoins = async () =>
 
   })
 
-  console.log('Going to wait 30 seconds for transactions to build before processing tokens market caps')
   // await new Promise((resolve) => setTimeout(resolve, 30000)) // Wait 30 seconnds for transactions to build to weed out quick one buy rugs
 
   await rabbitMQService.sendToQueue("NEW_TOKENS", JSON.stringify(token_mints_array))
