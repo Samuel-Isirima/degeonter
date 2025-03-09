@@ -8,6 +8,7 @@ import './logger';
 
 const app: Application = express()
 const port = process.env.APP_PORT || 3000
+const fetchNewTokensDelay = parseInt(process.env.FETCH_NEW_TOKENS_DELAY_MS || "30000")
 
   
 // Body parsing Middleware
@@ -57,7 +58,7 @@ async function startPullingNewTokens() {
     while (true) {
       await fetchLatestCoins(); // Wait for the function to finish
       console.log("Waiting one minute before the next call...")
-      await new Promise((resolve) => setTimeout(resolve, 30000)) // Wait one minute 30 seconds and retry
+      await new Promise((resolve) => setTimeout(resolve, fetchNewTokensDelay)) // Wait one minute 30 seconds and retry
     }
 }
   
