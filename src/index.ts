@@ -57,7 +57,7 @@ startPullingNewTokens()
 async function startPullingNewTokens() {
     while (true) {
       await fetchLatestCoins(); // Wait for the function to finish
-      console.log("Waiting one minute before the next call...")
+      console.log(`Waiting ${fetchNewTokensDelay} seconds before the next call...`)
       await new Promise((resolve) => setTimeout(resolve, fetchNewTokensDelay)) // Wait one minute 30 seconds and retry
     }
 }
