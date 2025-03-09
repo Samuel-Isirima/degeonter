@@ -184,6 +184,7 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     {
       distributionFilter.canBuy.push(false)
       distributionFilter.comment = ["❌ There is/are [a] wallet[s] holding over 5% of the total supply of the token"] 
+      console.log("❌ There is/are [a] wallet[s] holding over 5% of the total supply of the token")
     }
     else
     {
@@ -195,10 +196,10 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     console.log("holders with more than 2 percent")
     console.log(JSON.stringify(holdersWithMoreThan2Percent))
 
-    if(holdersWithMoreThan2Percent.length > 5)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
+    if(holdersWithMoreThan2Percent.length > 10)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
     {
       distributionFilter.canBuy.push(false)
-      distributionFilter.comment = ["❌ More than four wallets holding over 2% of the total supply of the token"] 
+      distributionFilter.comment = ["❌ More than 10 wallets holding over 2% of the total supply of the token"] 
     }
     else
     {
