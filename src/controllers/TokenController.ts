@@ -171,15 +171,18 @@ export const tokenDistribution = async ( queueMessage: string ) =>
       distributionFilter.comment = ["✅ Token has more than 5 holders"]
     }
 
+    //GEt holders with similar holdings
+    // const holdersWithSimilarHoldings = ownerHoldings.filter(holder => (parseFloat(holder.percentage) > 1 && parseFloat(holder.percentage) < 2))
+
     //For each owner holdings, apart from the first one which is always the bonding curve, if any other owner accounts hold more than 3%, flag
     // Filter entries with percentage > 2
     const holdersWithMoreThan5Percent = ownerHoldings.filter(holder => parseFloat(holder.percentage) > 5);
     console.log("holders with more than 5 percent")
     console.log(JSON.stringify(holdersWithMoreThan5Percent))
     
-    if(holdersWithMoreThan5Percent.length > 0)  //First one accounting for the bonding curve holdings, and one for dev. Anything else, is a danger
+    if(holdersWithMoreThan5Percent.length > 1)  //First one accounting for the bonding curve holdings. Anything else, is a danger
     {
-      distributionFilter.canBuy.push(true)
+      distributionFilter.canBuy.push(false)
       distributionFilter.comment = ["❌ There is/are [a] wallet[s] holding over 5% of the total supply of the token"] 
     }
     else
