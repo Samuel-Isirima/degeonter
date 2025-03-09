@@ -257,17 +257,17 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     marketCapFilter.canBuy.push(false)
     marketCapFilter.comment = ["❌ Token Market Cap less than $15k"] 
    }
-   else if(importantMCData.latestTime.market_cap > 15_000 && importantMCData.latestTime.market_cap < 41_000)
+   else if(importantMCData.latestTime.market_cap > 15_000 && importantMCData.latestTime.market_cap < 26_000)
    {
     //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
     marketCapFilter.canBuy.push(true)
-    marketCapFilter.comment = ["✅ Token Market Cap above $15k and less than $41k"] 
+    marketCapFilter.comment = ["✅ Token Market Cap above $15k and less than $26k"] 
    }
    else
    {
      //Essentially, never buying any coin with more than 15k mc; When this strategy works and builds liquidity, we can modify to allow for conviction buying
      marketCapFilter.canBuy.push(false)
-     marketCapFilter.comment = ["❌ Token Market Cap above $41k"] 
+     marketCapFilter.comment = ["❌ Token Market Cap above $26k"] 
    }
 
    if(importantMCData.highestMarketCap.time.timeAgoInMinutes >= 4)
