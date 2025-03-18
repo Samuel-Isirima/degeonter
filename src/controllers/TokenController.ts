@@ -40,7 +40,7 @@ export const fetchLatestCoins = async () =>
   }
   //We get the dev's wallet from the result of this query
   let api_response_data = api_call_response.data.data.Solana.Instructions
-  console.log('API response fetched, going to wait 30 seconds now before sending to queue')
+  // console.log('API response fetched, going to wait 30 seconds now before sending to queue')
   console.log(api_response_data)
  
    // Loop through the response and create interface instances
@@ -112,7 +112,8 @@ export const marketCapHistory = async ( queueMessage: string ) =>
 
       //Send to the buy queue if the token passes the filters
       if(!cannotBuy)
-        await rabbitMQService.sendToQueue("MARKET_CAP_PROCESSED", JSON.stringify(mc_result));
+      await rabbitMQService.sendToQueue("BUY", JSON.stringify(mc_result));
+      // await rabbitMQService.sendToQueue("MARKET_CAP_PROCESSED", JSON.stringify(mc_result));
     }
 
     
@@ -252,11 +253,11 @@ export const tokenDistribution = async ( queueMessage: string ) =>
     const importantMCData = getImportantTradeData(marketCapHistory);
 
 
-   if(importantMCData.latestTime.market_cap < 15_000)
+   if(importantMCData.latestTime.market_cap < 13_000)
    {
     //Essentially, never buying any coin with less than 15k mc. It could be a regular rug pull
     marketCapFilter.canBuy.push(false)
-    marketCapFilter.comment = ["❌ Token Market Cap less than $15k"] 
+    marketCapFilter.comment = ["❌ Token Market Cap less than $13k"] 
    }
    else if(importantMCData.latestTime.market_cap > 15_000 && importantMCData.latestTime.market_cap < 26_000)
    {
