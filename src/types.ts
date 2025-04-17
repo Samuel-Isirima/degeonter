@@ -8,4 +8,11 @@ export interface TokenBuyTransactionQueueMessageInterface {
 }
 
 
+export interface RugTokenMessageInterface {
+    payload: any;
+    tokenMint: string;
+    holders: number;
+}
+
+
 
